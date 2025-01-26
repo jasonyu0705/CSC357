@@ -39,20 +39,20 @@ struct tagBITMAPINFOHEADER{
 int main(int argc,char* argv[]){
     //initially take input and output  
 
-    //char *programName= argv[0];
+    char *programName= argv[0];
     string imageFileOne= argv[1];
     string OutputFile= argv[2];
     string Operation= argv[3];
     string contrastFactor= argv[4];
-    cout<<imageFileOne<<endl;
-    cout<<OutputFile<<endl;
-    cout<<Operation<<endl;
-    cout<<contrastFactor<<endl;
-    // //char *programName= "hi";
+    // cout<<imageFileOne<<endl;
+    // cout<<OutputFile<<endl;
+    // cout<<Operation<<endl;
+    // cout<<contrastFactor<<endl;
+    //char *programName= "hi";
     // string imageFileOne= "jar.bmp";
     // string OutputFile= "test1.bmp";
-    // string Operation= "contrast";
-    // string contrastFactor= "0.5";
+    // string Operation= "saturation";
+    // string contrastFactor= "100";
     //initialize the pointers to struct 
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -146,4 +146,4 @@ int main(int argc,char* argv[]){
     fwrite(&bmih,sizeof(tagBITMAPINFOHEADER),1,fileOut);
     fwrite(data,bmfh.bfSize,1,fileOut);
     fclose(fileOut);
-
+}
