@@ -19,9 +19,9 @@ struct hmem {
 void* head = NULL;
 
 void *myMalloc(int size) {
-    // Include header size in allocation
     size += sizeof(hmem);
-    
+    //only have to change program break in the first and last case becasue
+    //the middle case is only for cases where the program break needs to be created or moved
     // Initialize the head if it doesn't exist
     if (head == NULL) {
         int b = size / 4000;
@@ -48,28 +48,45 @@ void *myMalloc(int size) {
         while (i->n != NULL) { // Traverse to the last block
             i = (hmem*) i->n;
         }
-        
+        cout<<"here";
         // Allocate additional memory using sbrk
         int b = size / 4000;
         int mem = (b + 1) * 4000;
         void *PB = sbrk(mem);
-        hmem* p = (hmem*) PB; // New memory block
-        p->p = i;             // Set previous block pointer
+        hmem* p = (hmem*) PB; 
+        p->p = i;             
         p->n = NULL;          // No next block
         p->occ = 1;           // Mark as occupied
         p->size = mem;        // Set size of allocated memory
         i->n = p;             // Link previous block to new block
         return (void*) (p + 1); // Return pointer to user memory
+        cout<<"here2";
     }
 }
 
 
+ 
+void *myFree(void* addr){
+    //iterate throught the *linked list and look for the inputted adress
+     hmem *chunk=(hmem*) addr-1;
+    chunk->occ=0;
+    //
 
-void *myFree(int size){
+
+
+
+
+    // first check adn see fi the adress does nto exist fjust return null 
+    //ither wise if its found, als check if the occupoed variable is 1
+    //fif the chunk is the last one than you can mover the progrram break back
+    //then go through the list again to see if there are any adjacent chunks 
+    //that are free adn merge them
     
 }
 
 int main(){
+    int* data=(int*)malloc(40);
+    cout<<data;
     // BYTE*a[100];
     // analyze();//50% points
     // for(int i=0;i<100;i++)

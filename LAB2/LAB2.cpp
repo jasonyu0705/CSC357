@@ -9,13 +9,16 @@
 #include <math.h>
 #include <sys/mman.h>
 #include <sys/wait.h>
+#include <time.h>
 using namespace std;
 typedef unsigned char BYTE;
 
 typedef unsigned short WORD;
 typedef unsigned int DWORD;
 typedef unsigned int LONG;
+
 struct tagBITMAPFILEHEADER{
+       
     WORD bfType; //specifies the file type
     DWORD bfSize; //specifies the size in bytes of the bitmap file
     WORD bfReserved1; //reserved; must be 0
@@ -38,23 +41,25 @@ struct tagBITMAPINFOHEADER{
     DWORD biClrImportant; //number of colors that are important
 };
 int main(int argc,char* argv[]){
+     clock_t time_req;
+    time_req = clock();
     //initially take input and output  
-
-    // char *programName= argv[0];
-    // string imageFileOne= argv[1];
-    // string OutputFile= argv[2];
-    // string Operation= argv[3];
+    string imageFileOne= argv[1];
+    string colourGradingR= argv[2];
+    string colourGradingG= argv[3];
+    string colourGradingB= argv[4];
+    string OutputFile= argv[5];
     // string contrastFactor= argv[4];
     // cout<<imageFileOne<<endl;
     // cout<<OutputFile<<endl;
     // cout<<Operation<<endl;
     // cout<<contrastFactor<<endl;
-    char *programName= "hi";
-    string imageFileOne= "jar.bmp";
-    string colourGradingR= "0.2";
-    string colourGradingG= "0.2";
-    string colourGradingB= "0.2";
-    string OutputFile= "test1.bmp";
+
+    // string imageFileOne= "jar.bmp";
+    // string colourGradingR= "0.2";
+    // string colourGradingG= "0.2";
+    // string colourGradingB= "0.2";
+    // string OutputFile= "test1.bmp";
 
 
     //initialize the pointers to struct 
@@ -62,6 +67,8 @@ int main(int argc,char* argv[]){
     tagBITMAPINFOHEADER bmih;
     //actually reading in data
     BYTE* data;
+    //new data for reading twice
+    BYTE* data2;
     FILE* file=fopen(imageFileOne.c_str(),"rb");
     if (file==NULL){
         cout<<"NOT EXIST"<<endl;
@@ -77,12 +84,18 @@ int main(int argc,char* argv[]){
 
     //creating shared memory flag
     data=(BYTE*)mmap(0,bmfh.bfSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    data2=(BYTE*)mmap(0,bmfh.bfSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
     fread(data,bmfh.bfSize,1,file);
+    //copying data so that we can read it again
+    for (int i = 0; i < bmfh.bfSize; i++) {
+        data2[i]=data[i];
+    }
     fclose(file);
     LONG correctWidth=3*bmih.biWidth+(((bmih.biWidth)*3)%4);
     //FORKING
     if(fork()==0){
     //choose the opertion will each iterte throught 
+    time_req = clock();
         for (int y = 0; y < bmih.biHeight/2; y++) {
             for (int x = 0; x < bmih.biWidth; x++) {
                 //getting the data from the photo and turning it into float form
@@ -190,6 +203,67 @@ return 0;
     
     }
     wait(0);
+    time_req = clock() - time_req;
+    printf("Processor time taken for forking: %f "
+           "seconds\n",
+           (float)time_req / CLOCKS_PER_SEC);
+     for (int y = 0; y < bmih.biHeight; y++) {
+            for (int x = 0; x < bmih.biWidth; x++) {
+                //getting the data from the photo and turning it into float form
+                int test=3*x+y*correctWidth;
+                BYTE b=data2[3*x+y*correctWidth];
+                BYTE g=data2[3*x+y*correctWidth+1];
+                BYTE r=data2[3*x+y*correctWidth+2];
+                float bf=(float)b/255;
+                float gf=(float)g/255;
+                float rf=(float)r/255;
+
+                //get the color grading for each colour to a float
+                float cgr= atof(colourGradingR.c_str());
+                float cgg= atof(colourGradingG.c_str());
+                float cgb= atof(colourGradingB.c_str());
+                //multiplying normalized value by correction factor from terminal
+                bf*=cgb;
+                gf*=cgg;
+                rf*=cgr;
+            //old lab code removed
+                int bi=((int)(bf*255));
+                if(bi>255){
+                    bi=255;
+                }else if(bi<0){
+                    bi=0;
+                }
+                b=(BYTE)(bi);
+
+                int gi=((int)(gf*255));
+                if(gi>255){
+                    gi=255;
+                }else if(gi<0){
+                    gi=0;
+                }
+                g=(BYTE)(gi);
+
+                int ri=((int)(rf*255));
+                if(ri>255){
+                    ri=255;
+                }else if(ri<0){
+                    ri=0;
+                }
+                r=(BYTE)(ri);
+                
+                data2[3*x+y*correctWidth]=b;
+                data2[3*x+y*correctWidth+1]=g;
+                data2[3*x+y*correctWidth+2]=r;
+                //at this point the changed data is written to 
+            }
+        }      
+    wait(0);
+    time_req = clock() - time_req;
+    printf("Processor time taken without forking: %f "
+           "seconds\n",
+           (float)time_req / CLOCKS_PER_SEC);
+
+
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
  //reading the first structs infomation (not mult of 4 data so we have to read one by one)
     fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
@@ -203,22 +277,3 @@ return 0;
     fwrite(data,bmfh.bfSize,1,fileOut);
     fclose(fileOut);
 }
-
-
-//  if (strcmp(Operation.c_str(), "contrast") == 0) {
-//                 bf=pow(bf,cf/10);
-//                 gf=pow(gf,cf/10);
-//                 rf=pow(rf,cf/10);
-//                 //Contrast: Pixel = pow ( Pixel , factor);
-//             }else if(strcmp(Operation.c_str(), "saturation") == 0){
-//                 float avg= (bf+gf+rf)/3;
-//                 bf=bf+(bf-avg)*cf;
-//                 gf=gf+(gf-avg)*cf;
-//                 rf=rf+(rf-avg)*cf;
-//             //Pixel (color) = Pixel (color) + (Pixel (color) – Pixel (average)) * factor; 
-//             }else if(strcmp(Operation.c_str(), "lightness") == 0){
-//                 bf=bf+cf;
-//                 gf=gf+cf;
-//                 rf=rf+cf;
-//             //Lightness: Pixel (color) = Pixel (color) + factor;
-//             }
