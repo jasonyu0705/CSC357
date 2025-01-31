@@ -20,17 +20,17 @@ struct hmem {
 void* head = NULL;
 
 void *myMalloc(int size) {
-    cout<<size<<endl;
+    //cout<<size<<endl;
     size += sizeof(hmem);
-    cout<<size<<endl;
+    //cout<<size<<endl;
     //only have to change program break in the first and last case becasue
     //the middle case is only for cases where the program break needs to be created or moved
     // Initialize the head if it doesn't exist
     if (head == NULL) {
         int b = size / 4096;
-        cout<<b<<endl;
+        //cout<<b<<endl;
         int mem = (b + 1) * 4096;
-        cout<<mem<<endl;
+        //cout<<mem<<endl;
         void *PB = sbrk(mem); 
         hmem* p = (hmem*) PB; 
         head = p;             // Set the global head pointer
@@ -54,7 +54,7 @@ void *myMalloc(int size) {
         while (i->n != NULL) { // Traverse to the last block
             i = (hmem*) i->n;
         }
-        cout<<"here";
+        cout<<"here"<<endl;
         // Allocate additional memory using sbrk
         int b = size / 4096;
 
@@ -67,7 +67,7 @@ void *myMalloc(int size) {
         p->size = mem;        // Set size of allocated memory
         i->n = p;             // Link previous block to new block
         return (void*) (p + 1); // Return pointer to user memory
-        cout<<"here2";
+        cout<<"here2"<<endl;
     }
 }
 
@@ -77,47 +77,43 @@ void *myFree(void* addr){
     //iterate throught the *linked list and look for the inputted adress
      hmem *chunk=(hmem*) addr-1;
     chunk->occ=0;
+
     if(chunk->n==NULL){
+        //if the head is 
+        ((hmem*)chunk->p)->n = NULL;
         if (chunk->p) {
             ((hmem*)chunk->p)->n = NULL;
         } else {
             head = NULL;
         }
         sbrk(-chunk->size);
-        return;
+        
     }else if(chunk->n && ((hmem*)chunk->n)->occ == 0){
         //create a next pointer which is the next of the chunk, add its size to the chunk, then set the pointer to the next of the next block
         //essentially just like adding the size to the original chunk adn getting rid of the pointer to the next one (rerouting it to the one after)
         hmem* nextBlock = (hmem*)chunk->n;
         chunk->size += nextBlock->size; 
         chunk->n = nextBlock->n; 
-        if (nextBlock->n) {
-            ((hmem*)nextBlock->n)->p = chunk;
-        }
+        ((hmem*)nextBlock->n)->p = chunk;
+
     }else if(chunk->p && ((hmem*)chunk->p)->occ == 0){
         //create a previous pointer that is just the prev or chunk, add the size of chunk to prev and move the pointer to skip over the current chunk
         hmem* prevBlock = (hmem*)chunk->p;
         prevBlock->size += chunk->size ; 
         prevBlock->n = chunk->n ; 
-        if (prevBlock->p) {
-            ((hmem*)prevBlock->p)->n = chunk; 
-        }
+        ((hmem*)chunk->n)->p = prevBlock; 
+        
     }else if(chunk->n && ((hmem*)chunk->n)->occ == 0 && chunk->p && ((hmem*)chunk->p)->occ == 0){
         //add the size to the previous block adn reference everything from there
         hmem* prevBlock = (hmem*)chunk->p;
         hmem* nextBlock = (hmem*)chunk->n;
         prevBlock->size += chunk->size + nextBlock->size; 
         prevBlock->n = nextBlock->n;
-        if (nextBlock->n) {
-            ((hmem*)nextBlock->n)->p = prevBlock; 
-        }
-    }else{
+        ((hmem*)nextBlock->n)->p = prevBlock; 
+    }
+    else{
         cout<<"FREE DIDNT WORK"<<endl;
     }
-
-
-
-
 
     // first check adn see fi the adress does nto exist fjust return null 
     //ither wise if its found, als check if the occupoed variable is 1
@@ -126,30 +122,6 @@ void *myFree(void* addr){
     //that are free adn merge them
     
 }
-
-int main(){
-    int* data=(int*)myMalloc(30);
-    cout<<data;
-    int* data2=(int*)myMalloc(30);
-    cout<<data2;
-    // BYTE*a[100];
-    // analyze();//50% points
-    // for(int i=0;i<100;i++)
-    // a[i]= myMalloc(1000);
-    // for(int i=0;i<90;i++)
-    // myFree(a[i]);
-    // analyze(); //50% of points if this is correct
-    // myFree(a[95]);
-    // a[95] = myMalloc(1000);
-    // analyze();//25% points, this new chunk should fill the smaller free one
-    // //(best fit)
-    // for(int i=90;i<100;i++)
-    // myFree(a[i]);
-    // analyze();// 25% should be an empty heap now with the start address
-    // //from the program start
-}
-
-
 //you can change it when you aim for performance 
 
 hmem* get_last_chunk() {
@@ -182,3 +154,27 @@ printf("\n--------------------------------------------------------------\n");
     //loop through to see where there is space
         //thisis represended by a for loop
         //this means that firstly occupancy is 0 and secondly that there is enough space
+
+int main(){
+    // int* data=(int*)myMalloc(30);
+    // cout<<data;
+    // int* data2=(int*)myMalloc(30);
+    // cout<<data2;
+    void*a[100];
+    analyze();//50% points
+    for(int i=0;i<100;i++)
+    a[i]= myMalloc(1000);
+    for(int i=0;i<90;i++)
+    myFree(a[i]);
+    analyze(); //50% of points if this is correct
+    myFree(a[95]);
+    a[95] = myMalloc(1000);
+    analyze();//25% points, this new chunk should fill the smaller free one
+    //(best fit)
+    for(int i=90;i<100;i++)
+    myFree(a[i]);
+    analyze();// 25% should be an empty heap now with the start address
+    //from the program start
+}
+
+
