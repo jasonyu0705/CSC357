@@ -12,11 +12,20 @@
 using namespace std;
 
 int main(){
-    int fd= shm_open("sharedmem",O_RDWR|O_CREAT,0777);
-    ftruncate(fd,1000*sizeof(char));
-    char *p=(char*)mmap(NULL,1000*sizeof(char),PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
-    //read into the mmap 
-    cin>>p;
+    int fd = shm_open("sharedmem", O_RDWR | O_CREAT, 0777);
+    ftruncate(fd, 1000 * sizeof(char));
+    
+    // Map shared memory
+    char *p = (char*)mmap(NULL, 1000 * sizeof(char), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    
+    // **Zero out shared memory**
+    memset(p, 0, 1000 * sizeof(char));
+
+    while(strcmp(p, "quit") != 0){
+        read(STDIN_FILENO,p,1000);
+    }
+    
+    munmap(p, 1000 * sizeof(char));
+    close(fd);
+    return 0;
 }
-
-
