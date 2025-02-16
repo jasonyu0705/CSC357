@@ -18,11 +18,11 @@ int main(){
     // Map shared memory
     char *p = (char*)mmap(NULL, 1000 * sizeof(char), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     
-    // **Zero out shared memory**
     memset(p, 0, 1000 * sizeof(char));
 
     while(strcmp(p, "quit") != 0){
-        read(STDIN_FILENO,p,1000);
+        cin>>p;
+
     }
     
     munmap(p, 1000 * sizeof(char));
