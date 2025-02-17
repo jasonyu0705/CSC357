@@ -44,31 +44,37 @@ struct tagBITMAPINFOHEADER{
 //-------------------------------------------------------------------------------------------------------------------------------------
 pid_t pid;
 pid_t pid_kid;
-
+int larger;
 
 
 int main(int argc,char* argv[]){
      clock_t time_req;
     time_req = clock();
 
-    string imageFileOne= argv[1];
-    string imageFileTwo= argv[2];
-    string ratio= argv[3];
-    string process_number= argv[4];
-    string OutputFile= argv[5];
+    // string imageFileOne= argv[1];
+    // string imageFileTwo= argv[2];
+    // string ratio= argv[3];
+    // string process_number= argv[4];
+    // string OutputFile= argv[5];
 
-    if(sizeof(argv)!=5){
-        cout<<"the following is the format:"<<endl;
-        cout<<"[programname] [imagefile1] [imagefile2] [ratio] [process#] [outputfile]"<<endl;
+    string imageFileOne= "wolf.bmp";
+    string imageFileTwo= "lion.bmp";
+    string ratio= "0.5";
+    string process_number= "4";
+    string OutputFile= "test.bmp";
+
+    // if(sizeof(argv)!=5){
+    //     cout<<"the following is the format:"<<endl;
+    //     cout<<"[programname] [imagefile1] [imagefile2] [ratio] [process#] [outputfile]"<<endl;
         
-    }
+    // }
     //initialize the pointers to struct fro the first image and the second image
     tagBITMAPFILEHEADER bmfh1;
     tagBITMAPINFOHEADER bmih1;
     tagBITMAPFILEHEADER bmfh2;
     tagBITMAPINFOHEADER bmih2;
     tagBITMAPINFOHEADER bmih_large;
-
+    tagBITMAPFILEHEADER bmfh_large;
     BYTE* dataimg1;
     BYTE* dataimg2;
 
@@ -113,22 +119,34 @@ int main(int argc,char* argv[]){
 
     fclose(file2);
 //-------------------------------------------------------------------------------------------------------------------------------------
-    LONG correctWidth1=3*bmih1.biWidth+(((bmih1.biWidth)*3)%4);
-    LONG correctWidth2=3*bmih2.biWidth+(((bmih2.biWidth)*3)%4);
+//should onkly have one corrected width
+    // LONG correctWidth1=3*bmih1.biWidth+(((bmih1.biWidth)*3)%4);
+    // LONG correctWidth2=3*bmih2.biWidth+(((bmih2.biWidth)*3)%4);
+
 
     //ALSO DECIDING WHICH IMAGE HAS THE HGHER RESOLUTION 
     if(bmih1.biHeight<bmih2.biHeight){
         bmih_large.biHeight=bmih2.biHeight;
         bmih_large.biWidth=bmih2.biWidth;
+        int larger= 1;
     }else{
         bmih_large.biHeight=bmih1.biHeight;
         bmih_large.biWidth=bmih1.biWidth;
+        int larger= 0;
     }
+        LONG correctWidth=3*bmih_large.biWidth+(((bmih_large.biWidth)*3)%4);
+
     //create the correct number of forks by saying that you will keep creating forks while the process number is not reched
     //and the process is not the parent
     for (int x = 0; x <= stoi(process_number) && pid==0; x++) {
         // I THINK LINEAR INTERPOLATION GOES HERE
         pid_kid=fork();
+
+        if (pid_kid < 0) {
+        perror("Fork failed");
+        exit(1);
+        }   
+
         if(pid_kid==0){
             //create a kid and if we are in the kid
             LONG process_height=bmih_large.biHeight/stoi(process_number);
@@ -140,81 +158,74 @@ int main(int argc,char* argv[]){
             for (int y = fork_bottom; y < fork_top; y++) {
                 for (int x = 0; x < bmih_large.biWidth; x++) {
                     //getting the data from the photo and turning it into float form
-                    // int test=3*x+y*correctWidth;
-                    // BYTE b=data[3*x+y*correctWidth];
-                    // BYTE g=data[3*x+y*correctWidth+1];
-                    // BYTE r=data[3*x+y*correctWidth+2];
-                    // float bf=(float)b /255;
-                    // float gf=(float)g/255;
-                    // float rf=(float)r/255;
+                    BYTE b1=dataimg1[3*x+y*correctWidth];
+                    BYTE g1=dataimg1[3*x+y*correctWidth+1];
+                    BYTE r1=dataimg1[3*x+y*correctWidth+2];
+                    float bf1=(float)b1/255;
+                    float gf1=(float)g1/255;
+                    float rf1=(float)r1/255;
 
-                    // //get the color grading for each colour to a float
-                    // float cgr= atof(colourGradingR.c_str());
-                    // float cgg= atof(colourGradingG.c_str());
-                    // float cgb= atof(colourGradingB.c_str());
+                    BYTE b2=dataimg2[3*x+y*correctWidth];
+                    BYTE g2=dataimg2[3*x+y*correctWidth+1];
+                    BYTE r2=dataimg2[3*x+y*correctWidth+2];
+                    float bf2=(float)b2/255;
+                    float gf2=(float)g2/255;
+                    float rf2=(float)r2/255;
+                    //results 
+                    float bfr=0;
+                    float gfr=0;
+                    float rfr=0;
+                    float float_ratio= stof(ratio);
+                    //colour manipulation
+                    if (larger==1){//image 2 is larger and therefore is the first one
+                        bfr=bf2*float_ratio+bf1*(1-float_ratio);
+                        gfr=gf2*float_ratio+gf1*(1-float_ratio);
+                        rfr=rf2*float_ratio+rf1*(1-float_ratio);
 
-                    //multiplying normalized value by correction factor from terminal
-                    bf*=cgb;
-                    gf*=cgg;
-                    rf*=cgr;
-                    //correction
-                    int bi=((int)(bf*255));
-                    if(bi>255){
-                        bi=255;
-                    }else if(bi<0){
-                        bi=0;
+                    dataimg2[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
+                    dataimg2[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
+                    dataimg2[3*x+y*correctWidth + 2] = (BYTE)(fminf(fmaxf(rfr * 255, 0), 255));
+                    }else if (larger==0){//image 1 is larger
+                        bfr=bf1*float_ratio+bf2*(1-float_ratio);
+                        gfr=gf1*float_ratio+gf2*(1-float_ratio);
+                        rfr=rf1*float_ratio+rf2*(1-float_ratio);
+
+                    dataimg1[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
+                    dataimg1[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
+                    dataimg1[3*x+y*correctWidth + 2] = (BYTE)(fminf(fmaxf(rfr * 255, 0), 255));
                     }
-                    b=(BYTE)(bi);
-
-                    int gi=((int)(gf*255));
-                    if(gi>255){
-                        gi=255;
-                    }else if(gi<0){
-                        gi=0;
-                    }
-                    g=(BYTE)(gi);
-
-                    int ri=((int)(rf*255));
-                    if(ri>255){
-                        ri=255;
-                    }else if(ri<0){
-                        ri=0;
-                    }
-                    r=(BYTE)(ri);
-                    
-                    data[3*x+y*correctWidth]=b;
-                    data[3*x+y*correctWidth+1]=g;
-                    data[3*x+y*correctWidth+2]=r;
-                    //at this point the changed data is written to 
                 }
-            }    
+            }  
+            exit(0);
         }
         
     }
+    for (int i = 0; i < stoi(process_number); i++) {
+        wait(0);  // OR NULL
+    }
+    printf("All child processes finished. Proceeding to write output file...\n");  
 
-
-
-
-
-    wait(0);
-    time_req = clock() - time_req;
-    printf("Processor time taken for forking: %f "
-           "seconds\n",
-           (float)time_req / CLOCKS_PER_SEC);
- //in lab 2 this was just originl to time      
+    // wait(0);
+    // time_req = clock() - time_req;
+    // printf("Processor time taken for forking: %f "
+    //        "seconds\n",
+    //        (float)time_req / CLOCKS_PER_SEC);
 
 
 //WRITING TO FILES--------------------------------------------------
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
  //reading the first structs infomation (not mult of 4 data so we have to read one by one)
-    fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
-    fwrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,fileOut);
-    fwrite(&bmfh.bfReserved1,sizeof(bmfh.bfReserved1),1,fileOut);
-    fwrite(&bmfh.bfReserved2,sizeof(bmfh.bfReserved2),1,fileOut);
-    fwrite(&bmfh.bfOffBits,sizeof(bmfh.bfOffBits),1,fileOut);
+    fwrite(&bmfh_large.bfType,sizeof(bmfh_large.bfType),1,fileOut);
+    fwrite(&bmfh_large.bfSize,sizeof(bmfh_large.bfSize),1,fileOut);
+    fwrite(&bmfh_large.bfReserved1,sizeof(bmfh_large.bfReserved1),1,fileOut);
+    fwrite(&bmfh_large.bfReserved2,sizeof(bmfh_large.bfReserved2),1,fileOut);
+    fwrite(&bmfh_large.bfOffBits,sizeof(bmfh_large.bfOffBits),1,fileOut);
     //reading second structs data
-    fwrite(&bmih,sizeof(tagBITMAPINFOHEADER),1,fileOut);
-    //WRITING DATA THIS MAY CHANGE WITH THE FORKING
-    fwrite(data,bmfh.bfSize,1,fileOut);
+    fwrite(&bmih_large,sizeof(tagBITMAPINFOHEADER),1,fileOut);
+    if (larger==1){//image 2 is larger and therefore is the first one
+            fwrite(dataimg2,bmfh_large.bfSize,1,fileOut);
+    }else if (larger==0){//image 1 is larger
+            fwrite(dataimg1,bmfh_large.bfSize,1,fileOut);
+    }
     fclose(fileOut);
 }
