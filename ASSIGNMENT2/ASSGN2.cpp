@@ -42,6 +42,70 @@ struct tagBITMAPINFOHEADER{
 };
 
 //-------------------------------------------------------------------------------------------------------------------------------------
+// unsigned char Bilinear(unsigned char *imagedata, float x, float y, int imagewidth, int imageheight) {
+//     int x1 = (int)x;
+//     int y1 = (int)y;
+//     int x2 = x1 + 1;
+//     int y2 = y1 + 1;
+
+//     // Boundary check
+//     if (x1 >= imagewidth) x1 = imagewidth - 1;
+//     if (y1 >= imageheight) y1 = imageheight - 1;
+//     if (x2 >= imagewidth) x2 = imagewidth - 1;
+//     if (y2 >= imageheight) y2 = imageheight - 1;
+
+//     float dx = x - x1;
+//     float dy = y - y1;
+
+//     // BMP is stored as BGR, so red is at index 2
+//     int stride = imagewidth * 3; // Row stride in bytes
+
+//     unsigned char tl = imagedata[y2 * stride + x1 * 3 + 2];
+//     unsigned char tr = imagedata[y2 * stride + x2 * 3 + 2];
+//     unsigned char bl = imagedata[y1 * stride + x1 * 3 + 2];
+//     unsigned char br = imagedata[y1 * stride + x2 * 3 + 2];
+
+//     // Bilinear interpolation
+//     float Red_left = Red_left_upper * (1 - dy) + Red_left_lower * dy;
+//     float Red_right = Red_right_upper * (1 - dy) + Red_right_lower * dy;
+//     float Red_result = Red_left * (1 - dx) + Red_right * dx;
+
+//     return (unsigned char)Red_result;
+// }
+BYTE get_color_bilinear(tagBITMAPINFOHEADER ih,BYTE *imagedata, float x, float y, int imagewidth, int imageheight, int colour) {
+    //finding x1 and x2 given the lab format
+    int x1 = floor(x);
+    int y1 = floor(y);
+    int x2 = x1 + 1;
+    int y2 = y1 + 1;
+
+    // Clamp coordinates so they lie within the image bounds
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 >= imagewidth) x2 = imagewidth - 1;
+    if (y2 >= imageheight) y2 = imageheight - 1;
+
+    float dx = x - x1;
+    float dy = y - y1;
+
+    int rowsize = 3* ih.biWidth+(((ih.biWidth)*3)%4);
+    //int rowsize = 3*imagewidth;
+
+
+    // Get the four neighboring pixels for the given colour
+    BYTE tl  = imagedata[(y2 * rowsize + x1 * 3) + colour];
+    BYTE tr = imagedata[(y2 * rowsize + x2 * 3) + colour];
+    BYTE bl  = imagedata[(y1 * rowsize + x1 * 3) + colour];
+    BYTE br = imagedata[(y1 * rowsize + x2 * 3) + colour];
+
+    // First interpolate vertically
+    float left  = tl * (dy) + bl * (1-dy);
+    float right = tr * (dy) + br * (1-dy);
+
+    // Then interpolate horizontally
+    return (BYTE) left * (1 - dx) + right * dx;
+}
+
 pid_t pid;
 pid_t pid_kid;
 int larger;
@@ -51,23 +115,23 @@ int main(int argc,char* argv[]){
      clock_t time_req;
     time_req = clock();
 
-    // string imageFileOne= argv[1];
-    // string imageFileTwo= argv[2];
-    // string ratio= argv[3];
-    // string process_number= argv[4];
-    // string OutputFile= argv[5];
+    string imageFileOne= argv[1];
+    string imageFileTwo= argv[2];
+    string ratio= argv[3];
+    string process_number= argv[4];
+    string OutputFile= argv[5];
 
-    string imageFileOne= "wolf.bmp";
-    string imageFileTwo= "lion.bmp";
-    string ratio= "0.5";
-    string process_number= "4";
-    string OutputFile= "test.bmp";
+    // string imageFileOne= "Mario.bmp";
+    // string imageFileTwo= "jar.bmp";
+    // string ratio= "0.5";
+    // string process_number= "3";
+    // string OutputFile= "test2.bmp";
 
-    // if(sizeof(argv)!=5){
-    //     cout<<"the following is the format:"<<endl;
-    //     cout<<"[programname] [imagefile1] [imagefile2] [ratio] [process#] [outputfile]"<<endl;
+    if(argc!=5){
+        cout<<"the following is the format:"<<endl;
+        cout<<"[programname] [imagefile1] [imagefile2] [ratio] [process#] [outputfile]"<<endl;
         
-    // }
+    }
     //initialize the pointers to struct fro the first image and the second image
     tagBITMAPFILEHEADER bmfh1;
     tagBITMAPINFOHEADER bmih1;
@@ -93,9 +157,9 @@ int main(int argc,char* argv[]){
     //reading second structs data
     fread(&bmih1,sizeof(tagBITMAPINFOHEADER),1,file1);
     //creating shared memory flag
-    dataimg1=(BYTE*)mmap(0,bmfh1.bfSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    dataimg1=(BYTE*)mmap(0,bmih1.biSizeImage,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
 
-    fread(dataimg1,bmfh1.bfSize,1,file1);
+    fread(dataimg1,bmih1.biSizeImage,1,file1);
     fclose(file1);
 //-------------------------------------------------------------------------------------------------------------------------------------
 //OPENING FILE TWO INFOMATION-------------------------------------------------------------------------------------------
@@ -113,9 +177,10 @@ int main(int argc,char* argv[]){
     //reading second structs data
     fread(&bmih2,sizeof(tagBITMAPINFOHEADER),1,file2);
     //creating shared memory flag
-    dataimg2=(BYTE*)mmap(0,bmfh2.bfSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    //could be bi size image
+    dataimg2=(BYTE*)mmap(0,bmih2.biSizeImage,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
 
-    fread(dataimg2,bmfh2.bfSize,1,file2);
+    fread(dataimg2,bmih2.biSizeImage,1,file2);
 
     fclose(file2);
 //-------------------------------------------------------------------------------------------------------------------------------------
@@ -125,21 +190,21 @@ int main(int argc,char* argv[]){
 
 
     //ALSO DECIDING WHICH IMAGE HAS THE HGHER RESOLUTION 
-    if(bmih1.biHeight<bmih2.biHeight){
-        bmih_large.biHeight=bmih2.biHeight;
-        bmih_large.biWidth=bmih2.biWidth;
-        int larger= 1;
-    }else{
-        bmih_large.biHeight=bmih1.biHeight;
-        bmih_large.biWidth=bmih1.biWidth;
-        int larger= 0;
+    //bilinear also goes here
+    if(bmih1.biWidth<=bmih2.biWidth){//bilinear on 1
+        bmih_large=bmih2;
+        larger= 1;
+
+    }else if(bmih1.biWidth>bmih2.biWidth){//bilinear on 2
+        bmih_large=bmih1;
+        larger= 0;
     }
-        LONG correctWidth=3*bmih_large.biWidth+(((bmih_large.biWidth)*3)%4);
+    LONG correctWidth=3*bmih_large.biWidth+(((bmih_large.biWidth)*3)%4);
 
     //create the correct number of forks by saying that you will keep creating forks while the process number is not reched
-    //and the process is not the parent
-    for (int x = 0; x <= stoi(process_number) && pid==0; x++) {
-        // I THINK LINEAR INTERPOLATION GOES HERE
+    //and the process is not the parents
+
+    for (int x = 0; x <= stoi(process_number)-1 && pid==0; x++) {
         pid_kid=fork();
 
         if (pid_kid < 0) {
@@ -150,24 +215,27 @@ int main(int argc,char* argv[]){
         if(pid_kid==0){
             //create a kid and if we are in the kid
             LONG process_height=bmih_large.biHeight/stoi(process_number);
-            int fork_bottom=x*process_height; 
-            int fork_top=(x==stoi(process_number)-1)? bmih_large.biHeight : fork_bottom+ process_height;
+            int fork_bottom=x*process_height;
+            //can be -1 
+            int fork_top=(x==stoi(process_number))? bmih_large.biHeight : fork_bottom+ process_height;
             printf("process %d: Handling rows %ld to %ld\n",x,fork_bottom,fork_top);
             //iterates through the section of the photo
             
             for (int y = fork_bottom; y < fork_top; y++) {
                 for (int x = 0; x < bmih_large.biWidth; x++) {
                     //getting the data from the photo and turning it into float form
-                    BYTE b1=dataimg1[3*x+y*correctWidth];
-                    BYTE g1=dataimg1[3*x+y*correctWidth+1];
-                    BYTE r1=dataimg1[3*x+y*correctWidth+2];
+                    LONG correctWidth1=3*bmih1.biWidth+(((bmih1.biWidth)*3)%4);
+                    BYTE b1=dataimg1[3*x+y*correctWidth1];
+                    BYTE g1=dataimg1[3*x+y*correctWidth1+1];
+                    BYTE r1=dataimg1[3*x+y*correctWidth1+2];
                     float bf1=(float)b1/255;
                     float gf1=(float)g1/255;
                     float rf1=(float)r1/255;
-
-                    BYTE b2=dataimg2[3*x+y*correctWidth];
-                    BYTE g2=dataimg2[3*x+y*correctWidth+1];
-                    BYTE r2=dataimg2[3*x+y*correctWidth+2];
+                    
+                    LONG correctWidth2=3*bmih2.biWidth+(((bmih2.biWidth)*3)%4);
+                    BYTE b2=dataimg2[3*x+y*correctWidth2];
+                    BYTE g2=dataimg2[3*x+y*correctWidth2+1];
+                    BYTE r2=dataimg2[3*x+y*correctWidth2+2];
                     float bf2=(float)b2/255;
                     float gf2=(float)g2/255;
                     float rf2=(float)r2/255;
@@ -178,31 +246,56 @@ int main(int argc,char* argv[]){
                     float float_ratio= stof(ratio);
                     //colour manipulation
                     if (larger==1){//image 2 is larger and therefore is the first one
-                        bfr=bf2*float_ratio+bf1*(1-float_ratio);
-                        gfr=gf2*float_ratio+gf1*(1-float_ratio);
-                        rfr=rf2*float_ratio+rf1*(1-float_ratio);
+                        // Map coordinates from image2 space to image1 space
+                        float mapped_x = x * ((float)bmih1.biWidth / bmih_large.biWidth);
+                        float mapped_y = y * ((float)bmih1.biHeight / bmih_large.biHeight);
 
-                    dataimg2[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
-                    dataimg2[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
-                    dataimg2[3*x+y*correctWidth + 2] = (BYTE)(fminf(fmaxf(rfr * 255, 0), 255));
+                        BYTE b1 = get_color_bilinear(bmih1,dataimg1, mapped_x, mapped_y, bmih1.biWidth, bmih1.biHeight, 0);
+                        BYTE g1 = get_color_bilinear(bmih1,dataimg1, mapped_x, mapped_y, bmih1.biWidth, bmih1.biHeight, 1);
+                        BYTE r1 = get_color_bilinear(bmih1,dataimg1, mapped_x, mapped_y, bmih1.biWidth, bmih1.biHeight, 2);
+
+                        float bf1 = (float) b1 / 255.0;
+                        float gf1 = (float) g1 / 255.0;
+                        float rf1 = (float) r1 / 255.0;
+
+                            bfr=bf2*float_ratio+bf1*(1-float_ratio);
+                            gfr=gf2*float_ratio+gf1*(1-float_ratio);
+                            rfr=rf2*float_ratio+rf1*(1-float_ratio);
+                
+                        dataimg2[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
+                        dataimg2[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
+                        dataimg2[3*x+y*correctWidth + 2] = (BYTE)(fminf(fmaxf(rfr * 255, 0), 255));
+
                     }else if (larger==0){//image 1 is larger
+
+                        float mapped_x = x * ((float)bmih2.biWidth / bmih_large.biWidth);
+                        float mapped_y = y * ((float)bmih2.biHeight / bmih_large.biHeight);
+                        
+                        BYTE b2 = get_color_bilinear(bmih2,dataimg2, mapped_x, mapped_y, bmih2.biWidth, bmih2.biHeight, 0);
+                        BYTE g2 = get_color_bilinear(bmih2,dataimg2, mapped_x, mapped_y, bmih2.biWidth, bmih2.biHeight, 1);
+                        BYTE r2 = get_color_bilinear(bmih2,dataimg2, mapped_x, mapped_y, bmih2.biWidth, bmih2.biHeight, 2);
+
+                        float bf2 = (float) b2 / 255.0;
+                        float gf2 = (float) g2 / 255.0;
+                        float rf2 = (float) r2 / 255.0;
+
                         bfr=bf1*float_ratio+bf2*(1-float_ratio);
                         gfr=gf1*float_ratio+gf2*(1-float_ratio);
                         rfr=rf1*float_ratio+rf2*(1-float_ratio);
 
-                    dataimg1[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
-                    dataimg1[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
-                    dataimg1[3*x+y*correctWidth + 2] = (BYTE)(fminf(fmaxf(rfr * 255, 0), 255));
+                        dataimg1[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
+                        dataimg1[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
+                        dataimg1[3*x+y*correctWidth + 2] = (BYTE)(fminf(fmaxf(rfr * 255, 0), 255));
                     }
                 }
             }  
+
             exit(0);
         }
         
     }
-    for (int i = 0; i < stoi(process_number); i++) {
-        wait(0);  // OR NULL
-    }
+
+    while(wait(0)>0);
     printf("All child processes finished. Proceeding to write output file...\n");  
 
     // wait(0);
@@ -214,7 +307,17 @@ int main(int argc,char* argv[]){
 
 //WRITING TO FILES--------------------------------------------------
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
- //reading the first structs infomation (not mult of 4 data so we have to read one by one)
+    if (larger == 1) {  // Image 2 is larger
+        bmfh_large = bmfh2;
+    } else {  // Image 1 is larger
+        bmfh_large = bmfh1;
+    }
+
+printf("bfType: %X\n", bmfh_large.bfType);
+printf("bfSize: %u\n", bmfh_large.bfSize);
+printf("bfOffBits: %u\n", bmfh_large.bfOffBits);
+printf("biWidth: %d, biHeight: %d\n", bmih_large.biWidth, bmih_large.biHeight);
+
     fwrite(&bmfh_large.bfType,sizeof(bmfh_large.bfType),1,fileOut);
     fwrite(&bmfh_large.bfSize,sizeof(bmfh_large.bfSize),1,fileOut);
     fwrite(&bmfh_large.bfReserved1,sizeof(bmfh_large.bfReserved1),1,fileOut);
@@ -223,9 +326,11 @@ int main(int argc,char* argv[]){
     //reading second structs data
     fwrite(&bmih_large,sizeof(tagBITMAPINFOHEADER),1,fileOut);
     if (larger==1){//image 2 is larger and therefore is the first one
-            fwrite(dataimg2,bmfh_large.bfSize,1,fileOut);
+            fwrite(dataimg2,bmih_large.biSizeImage,1,fileOut);
     }else if (larger==0){//image 1 is larger
-            fwrite(dataimg1,bmfh_large.bfSize,1,fileOut);
+            fwrite(dataimg1,bmih_large.biSizeImage,1,fileOut);
     }
     fclose(fileOut);
+    munmap(dataimg1, bmih1.biSizeImage);
+    munmap(dataimg2, bmih1.biSizeImage);
 }
