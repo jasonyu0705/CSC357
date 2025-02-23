@@ -88,9 +88,13 @@ BYTE get_color_bilinear(tagBITMAPINFOHEADER ih,BYTE *imagedata, float x, float y
     float dx = x - x1;
     float dy = y - y1;
 
-    int rowsize = 3* ih.biWidth+(((ih.biWidth)*3)%4);
-    //int rowsize = 3*imagewidth;
-
+    int rowsize = 3* imagewidth;
+    //cout<< ((imagewidth)*3)%4 <<endl;
+    //||((imagewidth)*3)%4!=2
+    if (((imagewidth)*3)%4!=0 ){
+        //-2 here i think
+        rowsize = 3* imagewidth+ (4-((imagewidth)*3)%4);
+    }
 
     // Get the four neighboring pixels for the given colour
     BYTE tl  = imagedata[(y2 * rowsize + x1 * 3) + colour];
@@ -112,25 +116,44 @@ int larger;
 
 
 int main(int argc,char* argv[]){
-     clock_t time_req;
-    time_req = clock();
+   string error_String="\nYou have entered something wrong\nthe following is the format:\n"
+    "[programname] [imagefile1] [imagefile2] [ratio] [process#] [outputfile]\n"
+    "Program name: just the name of the program\n"
+    "image file1: the name of the first image file\n"
+    "image file2: the name of the second image file\n"
+    "ratio (0-1): how much of the image file is int eh final image. Turn the image into a ratio. for example 0.5 is 50:50\n"
+    "   where 50 percent of the first will go to the final adn 50 percent of th second image will go to the final.\n"
+    "process#(1-4): the number of processes you want the image to be split into\n"
+    "Output File: the file that will be written to";
 
+    if(argc<6){
+        cout<<error_String<<endl;
+        return 0;
+    }
+     if(argc>6){
+        cout<<error_String<<endl;
+        return 0;
+    }
     string imageFileOne= argv[1];
     string imageFileTwo= argv[2];
     string ratio= argv[3];
     string process_number= argv[4];
     string OutputFile= argv[5];
+ 
 
-    // string imageFileOne= "Mario.bmp";
-    // string imageFileTwo= "jar.bmp";
-    // string ratio= "0.5";
-    // string process_number= "3";
+    // string imageFileOne= "flowers.bmp";
+    // string imageFileTwo= "tunnel.bmp";
+    // string ratio= "0";
+    // string process_number= "2";
     // string OutputFile= "test2.bmp";
 
-    if(argc!=5){
-        cout<<"the following is the format:"<<endl;
-        cout<<"[programname] [imagefile1] [imagefile2] [ratio] [process#] [outputfile]"<<endl;
-        
+    if(stof(ratio)>1 || stof(ratio)<0){
+        cout<<error_String<<endl;
+        return 0;
+    }
+    else if(stoi(process_number)>4 || stoi(process_number)<1){
+        cout<<error_String<<endl;
+        return 0;
     }
     //initialize the pointers to struct fro the first image and the second image
     tagBITMAPFILEHEADER bmfh1;
@@ -144,9 +167,11 @@ int main(int argc,char* argv[]){
 
     //OPENING FILE ONE INFOMATION-------------------------------------------------------------------------------------------
     //opening the file
+
     FILE* file1=fopen(imageFileOne.c_str(),"rb");
     if (file1==NULL){
-        cout<<"NOT EXIST"<<endl;
+        cout<<error_String<<endl;
+        return 0;
     }
     //reading the first structs infomation (not mult of 4 data so we have to read one by one)
     fread(&bmfh1.bfType,sizeof(bmfh1.bfType),1,file1);
@@ -166,7 +191,8 @@ int main(int argc,char* argv[]){
     //opening the file
     FILE* file2=fopen(imageFileTwo.c_str(),"rb");
     if (file2==NULL){
-        cout<<"NOT EXIST"<<endl;
+        cout<<error_String<<endl;
+        return 0;
     }
     //reading the first structs infomation (not mult of 4 data so we have to read one by one)
     fread(&bmfh2.bfType,sizeof(bmfh2.bfType),1,file2);
@@ -185,8 +211,8 @@ int main(int argc,char* argv[]){
     fclose(file2);
 //-------------------------------------------------------------------------------------------------------------------------------------
 //should onkly have one corrected width
-    // LONG correctWidth1=3*bmih1.biWidth+(((bmih1.biWidth)*3)%4);
-    // LONG correctWidth2=3*bmih2.biWidth+(((bmih2.biWidth)*3)%4);
+    struct timespec start, end;
+        clock_gettime(CLOCK_MONOTONIC, &start);
 
 
     //ALSO DECIDING WHICH IMAGE HAS THE HGHER RESOLUTION 
@@ -199,7 +225,10 @@ int main(int argc,char* argv[]){
         bmih_large=bmih1;
         larger= 0;
     }
-    LONG correctWidth=3*bmih_large.biWidth+(((bmih_large.biWidth)*3)%4);
+    LONG correctWidth=3*bmih_large.biWidth;
+    if (((bmih_large.biWidth)*3)%4!=0 ){
+        correctWidth = 3* bmih_large.biWidth+ (4-((bmih_large.biWidth)*3)%4);
+    }
 
     //create the correct number of forks by saying that you will keep creating forks while the process number is not reched
     //and the process is not the parents
@@ -218,13 +247,17 @@ int main(int argc,char* argv[]){
             int fork_bottom=x*process_height;
             //can be -1 
             int fork_top=(x==stoi(process_number))? bmih_large.biHeight : fork_bottom+ process_height;
-            printf("process %d: Handling rows %ld to %ld\n",x,fork_bottom,fork_top);
+            //printf("process %d: Handling rows %ld to %ld\n",x,fork_bottom,fork_top);
             //iterates through the section of the photo
             
             for (int y = fork_bottom; y < fork_top; y++) {
                 for (int x = 0; x < bmih_large.biWidth; x++) {
                     //getting the data from the photo and turning it into float form
-                    LONG correctWidth1=3*bmih1.biWidth+(((bmih1.biWidth)*3)%4);
+                    LONG correctWidth1=3*bmih1.biWidth;
+                    if (((bmih1.biWidth)*3)%4!=0 ){
+                        //-2 here i think
+                        correctWidth1 = 3* bmih1.biWidth+ (4-((bmih1.biWidth)*3)%4);
+                     }
                     BYTE b1=dataimg1[3*x+y*correctWidth1];
                     BYTE g1=dataimg1[3*x+y*correctWidth1+1];
                     BYTE r1=dataimg1[3*x+y*correctWidth1+2];
@@ -232,7 +265,11 @@ int main(int argc,char* argv[]){
                     float gf1=(float)g1/255;
                     float rf1=(float)r1/255;
                     
-                    LONG correctWidth2=3*bmih2.biWidth+(((bmih2.biWidth)*3)%4);
+                    LONG correctWidth2=3*bmih2.biWidth;
+                    if (((bmih2.biWidth)*3)%4!=0 ){
+                        //-2 here i think
+                        correctWidth2 = 3* bmih2.biWidth+ (4-((bmih2.biWidth)*3)%4);
+                    }
                     BYTE b2=dataimg2[3*x+y*correctWidth2];
                     BYTE g2=dataimg2[3*x+y*correctWidth2+1];
                     BYTE r2=dataimg2[3*x+y*correctWidth2+2];
@@ -296,14 +333,12 @@ int main(int argc,char* argv[]){
     }
 
     while(wait(0)>0);
-    printf("All child processes finished. Proceeding to write output file...\n");  
+    //printf("All child processes finished. Proceeding to write output file...\n");  
 
-    // wait(0);
-    // time_req = clock() - time_req;
-    // printf("Processor time taken for forking: %f "
-    //        "seconds\n",
-    //        (float)time_req / CLOCKS_PER_SEC);
 
+    clock_gettime(CLOCK_MONOTONIC, &end);
+        long time_passed = (end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000;
+        cout << "Time taken: " << time_passed << " ms" << endl;
 
 //WRITING TO FILES--------------------------------------------------
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
@@ -313,10 +348,10 @@ int main(int argc,char* argv[]){
         bmfh_large = bmfh1;
     }
 
-printf("bfType: %X\n", bmfh_large.bfType);
-printf("bfSize: %u\n", bmfh_large.bfSize);
-printf("bfOffBits: %u\n", bmfh_large.bfOffBits);
-printf("biWidth: %d, biHeight: %d\n", bmih_large.biWidth, bmih_large.biHeight);
+// printf("bfType: %X\n", bmfh_large.bfType);
+// printf("bfSize: %u\n", bmfh_large.bfSize);
+// printf("bfOffBits: %u\n", bmfh_large.bfOffBits);
+// printf("biWidth: %d, biHeight: %d\n", bmih_large.biWidth, bmih_large.biHeight);
 
     fwrite(&bmfh_large.bfType,sizeof(bmfh_large.bfType),1,fileOut);
     fwrite(&bmfh_large.bfSize,sizeof(bmfh_large.bfSize),1,fileOut);
@@ -331,6 +366,12 @@ printf("biWidth: %d, biHeight: %d\n", bmih_large.biWidth, bmih_large.biHeight);
             fwrite(dataimg1,bmih_large.biSizeImage,1,fileOut);
     }
     fclose(fileOut);
-    munmap(dataimg1, bmih1.biSizeImage);
-    munmap(dataimg2, bmih1.biSizeImage);
+    if (larger==1){//image 2 is larger and therefore is the first one
+        munmap(dataimg1, bmih1.biSizeImage);
+        munmap(dataimg2, bmih_large.biSizeImage);
+    }else if (larger==0){//image 1 is larger
+        munmap(dataimg1, bmih_large.biSizeImage);
+        munmap(dataimg2, bmih2.biSizeImage);
+    }
+    return 0;
 }
