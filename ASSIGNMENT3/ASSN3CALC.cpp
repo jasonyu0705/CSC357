@@ -11,15 +11,38 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <fcntl.h>
-#define MATSIZE 3
+#define MATSIZE 100
 using namespace std;
 
 
 // input formatting: program name, program id, total number of processes 
 // good explanation in the lab pdf
 int* id_status;
-// int* released= (int*)mmap(0,4,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
-// int* first= (int*)mmap(0,4,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+
+void print(long* A, long* B,long* M) {
+    for (int i = 0; i < MATSIZE; i++) {
+        for (int j = 0; j < MATSIZE; j++) {
+            cout << A[i * MATSIZE + j] << " ";
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+    
+    for (int i = 0; i < MATSIZE; i++) {
+        for (int j = 0; j < MATSIZE; j++) {
+            cout << B[i * MATSIZE + j] << " ";
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+    for (int i = 0; i < MATSIZE; i++) {
+        for (int j = 0; j < MATSIZE; j++) {
+            cout << M[i * MATSIZE + j] << " ";
+        }
+        cout << "\n";
+    }
+    cout << "\n";
+}
 
 //note:
 //"ready" is a named shared array as big as par_count which needs to be initialized with zeros.
@@ -49,39 +72,41 @@ void gather(int par_id, int par_count, int* ready)
 }
 
 int main(int argc,char* argv[]){
-    
+    timespec start_time, end_time;
     //changing inputs into the required types
     int prog_id = atoi(argv[1]);
     int p_count = atoi(argv[2]);
     int ready;
     int Ashared;
     int Bshared;
-    int Cshared;
-    int *A;
-    int *B;
-    int *M;
+    int Mshared;
+
+
+    long *A;
+    long *B;
+    long *M;
     //if its the first program, create the shared mem else justr opent it
 
     if (prog_id==0){
-        Ashared = shm_open("Ashared", O_CREAT | O_RDWR, 0777);
-        ftruncate(Ashared, sizeof(int) * MATSIZE * MATSIZE );
-        Bshared = shm_open("Bshared", O_CREAT | O_RDWR, 0777);
-        ftruncate(Bshared, sizeof(int) * MATSIZE * MATSIZE );
-        Cshared = shm_open("Cshared", O_CREAT | O_RDWR, 0777);
-        ftruncate(Cshared, sizeof(int) * MATSIZE * MATSIZE );
-        ready = shm_open("readymem2", O_CREAT | O_RDWR, 0777);
+        Ashared = shm_open("Ashared1", O_CREAT | O_RDWR, 0777);
+        ftruncate(Ashared, sizeof(long) * MATSIZE * MATSIZE );
+        Bshared = shm_open("Bshared1", O_CREAT | O_RDWR, 0777);
+        ftruncate(Bshared, sizeof(long) * MATSIZE * MATSIZE );
+        Mshared = shm_open("Mshared1", O_CREAT | O_RDWR, 0777);
+        ftruncate(Mshared, sizeof(long) * MATSIZE * MATSIZE );
+        ready = shm_open("readymem1", O_CREAT | O_RDWR, 0777);
         ftruncate(ready, sizeof(int) *(p_count+1));
     } else {
         sleep(1);
-        Ashared = shm_open("Ashared", O_RDWR, 0777);
-        Bshared = shm_open("Bshared", O_RDWR, 0777);
-        Cshared = shm_open("Cshared", O_RDWR, 0777);
-        ready = shm_open("readymem2", O_RDWR, 0777);
+        Ashared = shm_open("Ashared1", O_RDWR, 0777);
+        Bshared = shm_open("Bshared1", O_RDWR, 0777);
+        Mshared = shm_open("Mshared1", O_RDWR, 0777);
+        ready = shm_open("readymem1", O_RDWR, 0777);
     }
     //setting the pointers to certian parts of the mmap
-    A = (int*)mmap(NULL, sizeof(int) * MATSIZE * MATSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, Ashared, 0);
-    B = (int*)mmap(NULL, sizeof(int) * MATSIZE * MATSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, Bshared, 0);
-    M = (int*)mmap(NULL, sizeof(int) * MATSIZE * MATSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, Cshared, 0);
+    A = (long*)mmap(NULL, sizeof(long) * MATSIZE * MATSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, Ashared, 0);
+    B = (long*)mmap(NULL, sizeof(long) * MATSIZE * MATSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, Bshared, 0);
+    M = (long*)mmap(NULL, sizeof(long) * MATSIZE * MATSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, Mshared, 0);
     id_status= (int*)mmap(0,sizeof(int) *(p_count+1),PROT_READ|PROT_WRITE,MAP_SHARED,ready,0);
 
     //filling the matricies with random numbers
@@ -92,14 +117,19 @@ int main(int argc,char* argv[]){
                 B[i] = rand() % 10;
                 M[i]=0;
         }
-        memset(id_status,0,sizeof(int) *(p_count+1));
+        memset(id_status,0,sizeof(long) *(p_count+1));
 
     }else{
     sleep(1);
     }
 
     gather( prog_id,p_count,id_status);
-
+    if (prog_id==0){
+   
+        clock_gettime(CLOCK_MONOTONIC, &start_time);
+    }else{
+        sleep(1);
+    }
 
     int process_rows=MATSIZE/p_count;
     int extra_rows=MATSIZE%p_count;
@@ -123,58 +153,73 @@ int main(int argc,char* argv[]){
             }
         }
     }
-    // gather( prog_id,p_count,id_status);
+    gather( prog_id,p_count,id_status);
+    if (prog_id==0){
+       //print(A,B, M);
+    }else{
+        sleep(1);
+    }
+    
 
-    // for (int i = start; i < end; i++) {
-    //     for (int j = 0; j < MATSIZE; j++) {
-    //         B[i* MATSIZE+j] = 0;
-    //         for (int k = 0; k < MATSIZE; k++) {
-    //             B[i*MATSIZE+j] += A[i*MATSIZE+k] * M[k*MATSIZE+j];
-    //         }
-    //     }
-    // }
-    // for (int i = start; i < end; i++) {
-    //     for (int j = 0; j < MATSIZE; j++) {
-    //         M[i* MATSIZE+j] = 0;
-    //         for (int k = 0; k < MATSIZE; k++) {
-    //             M[i*MATSIZE+j] += A[i*MATSIZE+k] * B[k*MATSIZE+j];
-    //         }
-    //     }
-    // }
-
+    for (int i = start; i < end; i++) {
+        for (int j = 0; j < MATSIZE; j++) {
+            B[i* MATSIZE+j] = 0;
+            for (int k = 0; k < MATSIZE; k++) {
+                B[i*MATSIZE+j] += M[i*MATSIZE+k] * A[k*MATSIZE+j];
+            }
+        }
+    }
+        gather( prog_id,p_count,id_status);
+    if (prog_id==0){
+       //print(A,B, M);
+    }else{
+        sleep(1);
+    }
+    for (int i = start; i < end; i++) {
+        for (int j = 0; j < MATSIZE; j++) {
+            M[i* MATSIZE+j] = 0;
+            for (int k = 0; k < MATSIZE; k++) {
+                M[i*MATSIZE+j] += B[i*MATSIZE+k] * A[k*MATSIZE+j];
+            }
+        }
+    }
     gather( prog_id,p_count,id_status);
 
     if (prog_id==0){
-    for (int i = 0; i < MATSIZE; i++) {
-        for (int j = 0; j < MATSIZE; j++) {
-            cout << M[i * MATSIZE + j] << " ";
-        }
-        cout << "\n";
+       //print(A,B, M);
+    }else{
+        sleep(1);
     }
-    cout << "\n";
-    
-    for (int i = 0; i < MATSIZE; i++) {
-        for (int j = 0; j < MATSIZE; j++) {
-            cout << A[i * MATSIZE + j] << " ";
+
+    if (prog_id==0){
+        //calculate diagonal
+        long diag = 0;
+        for (int i = 0; i < MATSIZE; i++) {
+            diag += M[i + i * MATSIZE];
         }
-        cout << "\n";
-    }
-    cout << "\n";
-    for (int i = 0; i < MATSIZE; i++) {
-        for (int j = 0; j < MATSIZE; j++) {
-            cout << B[i * MATSIZE + j] << " ";
-        }
-        cout << "\n";
-    }
-    cout << "\n";
+        cout<<"the sum of the diagonal of m is "<<diag<<endl;
+        
+
+        clock_gettime(CLOCK_MONOTONIC, &end_time);
+            long time_passed = (end_time.tv_sec - start_time.tv_sec) * 1000000 + (end_time.tv_nsec - start_time.tv_nsec) / 1000;
+            cout << "Time taken: " << time_passed << " us" << endl;
+        shm_unlink("Ashared1");
+        shm_unlink("Bshared1");
+        shm_unlink("Cshared1");
+        shm_unlink("readymem1");
+    }else{
+        sleep(1);
     }
     
 
-    gather( prog_id,p_count,id_status);
     //clearing things
     munmap(id_status,sizeof(int)*p_count);
-    munmap(A, sizeof(int) * MATSIZE * MATSIZE);
-    munmap(B, sizeof(int) * MATSIZE * MATSIZE);
-    munmap(M, sizeof(int) * MATSIZE * MATSIZE);
+    munmap(A, sizeof(long) * MATSIZE * MATSIZE);
+    munmap(B, sizeof(long) * MATSIZE * MATSIZE);
+    munmap(M, sizeof(long) * MATSIZE * MATSIZE);
+    close(Ashared);
+    close(Bshared);
+    close(Mshared);
+    close(ready);
     return 0;
 }

@@ -30,7 +30,8 @@ int main(int argc,char* argv[]){
 
     for (int i=0;i < num_processes;i++){
         // i think i gotta fix formatting after
-        strcpy(args[0],calc_prog_name.c_str());// callee program name
+        //strcpy(args[0],calc_prog_name.c_str());// callee program name
+        sprintf(args[0], "%s%s", "./", calc_prog_name.c_str());
         sprintf(args[1],"%d",i);//prog_id
         sprintf(args[2],"%d",num_processes);//total processes
         pid=fork();
