@@ -39,10 +39,11 @@ struct tagBITMAPINFOHEADER{
     DWORD biClrImportant; //number of colors that are important
 };
 struct HuffNode{
-    int data=NULL;
-    int freq=NULL;
+    int data;
+    int freq;
     struct HuffNode *left, *right;
 };
+
 
 HuffNode *currentList;
 
@@ -63,7 +64,7 @@ int compare(const void *ptr1, const void *ptr2){
     }
 }
 // Function to build a Huffman tree for a specific color
-HuffNode* buildHuffmanTree(HuffNode *huff[], int *size) {
+HuffNode* buildTree(HuffNode *huff[], int *size) {
     // Sort non-null nodes first
     qsort(huff, *size, sizeof(HuffNode *), compare);
 
@@ -93,23 +94,27 @@ HuffNode* buildHuffmanTree(HuffNode *huff[], int *size) {
     return huff[0];  // Return root of Huffman tree
 }
 //function that traverses the tree and creates codes for the values
-void generateHuffmanCodes(HuffNode* root, string code, map<int, string> &huffmanTable) {
+void generateCode(HuffNode* root, string code,long length[], string huffData[]) {
     if (!root) return;
     
     // Leaf node: store the Huffman code
     if (root->left == NULL && root->right == NULL) {
-        huffmanTable[root->data] = code;
+        huffData[root->data] = code;
+        length[root->data] = code.length();
+
     }
     
     // Recursively go left (add 0) and right (add 1)
-    generateHuffmanCodes(root->left, code + "0", huffmanTable);
-    generateHuffmanCodes(root->right, code + "1", huffmanTable);
+    generateCode(root->left, code + "0",length, huffData);
+    generateCode(root->right, code + "1", length, huffData);
 }
-
 int main(int argc, char *argv[]){
     //taking in inputs from terminal
-    string imageFile= argv[1];
-    string quality= argv[2];
+    // string imageFile= argv[1];
+    // string quality= argv[2];
+
+    string imageFile= "jar.bmp";
+    string quality= "1";
 
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
@@ -145,6 +150,9 @@ int main(int argc, char *argv[]){
     HuffNode* bList[256];
     HuffNode* gList[256];
     HuffNode* rList[256];
+    string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
+    long rHuffLen[256], gHuffLen[256], bHuffLen[256];
+
 
     //creating size counters for freqwuency noirtes
 
@@ -211,16 +219,15 @@ int main(int argc, char *argv[]){
         }
     }
 
- //build the trees
-HuffNode *rRoot =buildHuffmanTree(rList, &rSize);
-HuffNode *gRoot =buildHuffmanTree(gList, &gSize);
-HuffNode *bRoot =buildHuffmanTree(bList, &bSize);
+    //build the trees
+    HuffNode *rRoot =buildTree(rList, &rSize);
+    HuffNode *gRoot =buildTree(gList, &gSize);
+    HuffNode *bRoot =buildTree(bList, &bSize);
 
-//get the huffman codes from the tree
-int[] rHuffCodes, gHuffCodes, bHuffCodes;
-generateHuffmanCodes(rRoot, "", rHuffCodes);
-generateHuffmanCodes(gRoot, "", gHuffCodes);
-generateHuffmanCodes(bRoot, "", bHuffCodes);
+    //get the huffman codes from the tree
+    generateCode(rRoot, "",rHuffLen, rHuffCodes);
+    generateCode(gRoot, "",gHuffLen,gHuffCodes);
+    generateCode(bRoot, "",bHuffLen, bHuffCodes);
 
 
 
