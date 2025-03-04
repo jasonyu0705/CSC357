@@ -152,7 +152,13 @@ int main(int argc, char *argv[]){
     HuffNode* rList[256];
     string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
     long rHuffLen[256], gHuffLen[256], bHuffLen[256];
-
+    //initializing lists to 0
+    memset(rHuffCodes, 0, 256);
+    memset(gHuffCodes, 0,256);
+    memset(bHuffCodes, 0, 256);
+    memset(gHuffLen, 0, 256);
+    memset(rHuffLen, 0, 256);
+    memset(bHuffLen, 0, 256);
 
     //creating size counters for freqwuency noirtes
 
@@ -228,6 +234,7 @@ int main(int argc, char *argv[]){
     generateCode(rRoot, "",rHuffLen, rHuffCodes);
     generateCode(gRoot, "",gHuffLen,gHuffCodes);
     generateCode(bRoot, "",bHuffLen, bHuffCodes);
+    //packing bits into data
 
 
 

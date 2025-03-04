@@ -316,9 +316,9 @@ int main(int argc,char* argv[]){
                         float gf2 = (float) g2 / 255.0;
                         float rf2 = (float) r2 / 255.0;
 
-                        bfr=bf1*float_ratio+bf2*(1-float_ratio);
-                        gfr=gf1*float_ratio+gf2*(1-float_ratio);
-                        rfr=rf1*float_ratio+rf2*(1-float_ratio);
+                        bfr=bf2*float_ratio+bf1*(1-float_ratio);
+                        gfr=gf2*float_ratio+gf1*(1-float_ratio);
+                        rfr=rf2*float_ratio+rf1*(1-float_ratio);
 
                         dataimg1[3*x+y*correctWidth] = (BYTE)(fminf(fmaxf(bfr * 255, 0), 255));
                         dataimg1[3*x+y*correctWidth + 1] = (BYTE)(fminf(fmaxf(gfr * 255, 0), 255));
