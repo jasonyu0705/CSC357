@@ -38,6 +38,34 @@ struct tagBITMAPINFOHEADER{
     DWORD biClrUsed; //number of colors used by the bitmap
     DWORD biClrImportant; //number of colors that are important
 };
+
+
+// FileHeader contains overall file info
+struct tagCOMPRESSFILEHEADER {
+    //BYTE magic[4];       // Magic signature, e.g., "HUF" plus null terminator.
+    DWORD fileSize;    
+    DWORD headerSize; 
+    DWORD dataOffset; 
+};
+
+// InfoHeader stores metadata required for decompression
+struct tagCOMPRESSINFOHEADER {
+    LONG width;     
+    LONG height;   
+    LONG redSize;   
+    LONG greenSize; 
+    LONG blueSize;    
+    BYTE compressionMethod; 
+    // Frequency tables for rebuilding Huffman trees:
+    LONG redFreq[256];
+    LONG greenFreq[256];
+    LONG blueFreq[256];
+    // // Optionally, you can also store the total bit counts for each channel:
+    // DWORD redBitCount;
+    // DWORD greenBitCount;
+    // DWORD blueBitCount;
+};
+
 struct HuffNode{
     int data;
     int freq;
@@ -63,6 +91,40 @@ int compare(const void *ptr1, const void *ptr2){
         return 1;
     }
 }
+
+
+
+
+// Function to write a single bit into the packed data array
+void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
+
+    int byteIndex = *bitPos / 8;   
+    
+    int shift=7-*bit_counter;
+    if (bit==1) {  // If bit is 1, set the bit at the correct position
+     BYTE bitMask= 1<<shift;
+        packedData[byteIndex] |= bitMask;
+    }
+    if(*bit_counter>=7){
+        *bit_counter=0;
+    }else{
+        *bit_counter=*bit_counter+1;
+    }
+    *bitPos=*bitPos+1;
+}
+
+// Function to write a full Huffman code (string) into the packed data array
+void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter) {
+    for (int i = 0; i < huffCode.size(); i++) {
+        char bit = huffCode[i];  // Get the character from the string
+        writeBit(bit - '0', packedData, bitPos,bit_counter);
+
+        
+        
+    }
+}
+
+
 // Function to build a Huffman tree for a specific color
 HuffNode* buildTree(HuffNode *huff[], int *size) {
     // Sort non-null nodes first
@@ -108,6 +170,7 @@ void generateCode(HuffNode* root, string code,long length[], string huffData[]) 
     generateCode(root->left, code + "0",length, huffData);
     generateCode(root->right, code + "1", length, huffData);
 }
+
 int main(int argc, char *argv[]){
     //taking in inputs from terminal
     // string imageFile= argv[1];
@@ -152,6 +215,11 @@ int main(int argc, char *argv[]){
     HuffNode* rList[256];
     string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
     long rHuffLen[256], gHuffLen[256], bHuffLen[256];
+
+    BYTE packedRed[bmih.biSizeImage] ;
+    BYTE packedGreen[bmih.biSizeImage];
+    BYTE packedBlue[bmih.biSizeImage];
+
     //initializing lists to 0
     memset(rHuffCodes, 0, 256);
     memset(gHuffCodes, 0,256);
@@ -207,6 +275,7 @@ int main(int argc, char *argv[]){
             rList[rVal]->freq++;
         }
     }  
+
     // Count the number of non-null Huffman nodes
     // Declare size counters for each list
     int rSize = 0, gSize = 0, bSize = 0;
@@ -234,7 +303,36 @@ int main(int argc, char *argv[]){
     generateCode(rRoot, "",rHuffLen, rHuffCodes);
     generateCode(gRoot, "",gHuffLen,gHuffCodes);
     generateCode(bRoot, "",bHuffLen, bHuffCodes);
-    //packing bits into data
+ 
+   //bit position poinrters
+    int bitPosRed = 0, bitPosGreen = 0, bitPosBlue = 0;
+    int bit_counter;
+
+    bit_counter=0;
+    //convert this to huffman data
+    for (int y = 0; y <  bmih.biHeight; y++) {  // Loop through rows
+        for (int x = 0; x <  bmih.biWidth; x++) {  // Loop through columns
+            // Extract RGB values from the image data array
+            BYTE bVal = dataimg[3 * x + y * correctWidth];      // Blue
+            BYTE gVal = dataimg[3 * x + y * correctWidth + 1];  // Green
+            BYTE rVal = dataimg[3 * x + y * correctWidth + 2];  // Red
+
+            // Pack Huffman-encoded bits directly into unsigned char arrays
+            packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bit_counter);
+            packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bit_counter);
+            packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bit_counter); 
+            // Print the binary representation of the packed blue data
+            // int start = (bitPosBlue >= 8) ? bitPosBlue - 8 : 0;
+            // for (int i = start; i < bitPosBlue; i++) {
+            //     BYTE bit = (packedBlue[i / 8] >> (7 - (i % 8))) & 1;
+            //     printf("%u", bit);
+            // }
+            // printf("\n");
+         
+        }
+
+    }
+    
 
 
 
