@@ -40,26 +40,18 @@ struct tagBITMAPINFOHEADER{
 };
 
 
-// FileHeader contains overall file info
-struct tagCOMPRESSFILEHEADER {
-    //BYTE magic[4];       // Magic signature, e.g., "HUF" plus null terminator.
-    DWORD fileSize;      // Total size of the file in bytes.
-    DWORD headerSize;    // Size of the info header.
-    DWORD dataOffset;    // Offset from the beginning of the file to the compressed data.
-};
-
 // InfoHeader stores metadata required for decompression
-struct tagCOMPRESSINFOHEADER {
-    LONG width;         // Original image width.
-    LONG height;        // Original image height.
-    LONG redSize;       // Compressed size (in bytes) for the red channel.
-    LONG greenSize;     // Compressed size (in bytes) for the green channel.
-    LONG blueSize;      // Compressed size (in bytes) for the blue channel.
-    //BYTE compressionMethod; // A flag for the compression method (e.g., 1 for Huffman coding).
-    // Frequency tables for rebuilding Huffman trees:
-    DWORD redFreq[256];
-    DWORD greenFreq[256];
-    DWORD blueFreq[256];
+struct tagCOMPRESSHEADER {
+    DWORD headerSize;// Size of the info header.
+    DWORD dataOffset;// Offset from the beginning of the file to the compressed data.
+    LONG width;// Original image width.
+    LONG height;// Original image height.
+    LONG redSize;// Compressed size (in bytes) for the red channel.
+    LONG greenSize;// Compressed size (in bytes) for the green channel.
+    LONG blueSize;// Compressed size (in bytes) for the blue channel.
+    LONG redFreq[256];
+    LONG greenFreq[256];
+    LONG blueFreq[256];
 
 };
 
@@ -71,7 +63,13 @@ struct HuffNode{
 
 
 HuffNode *currentList;
-
+// // Recursive function to free all nodes in a Huffman tree.
+// void freeTree(HuffNode* root) {
+//     if (!root) return;
+//     freeTree(root->left);
+//     freeTree(root->right);
+//     delete root;
+// }
 int compare(const void *ptr1, const void *ptr2){
     const HuffNode* n1 = *(const HuffNode **)ptr1;
     const HuffNode* n2 = *(const HuffNode **)ptr2;
@@ -115,9 +113,6 @@ void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter)
     for (int i = 0; i < huffCode.size(); i++) {
         char bit = huffCode[i];  // Get the character from the string
         writeBit(bit - '0', packedData, bitPos,bit_counter);
-
-        
-        
     }
 }
 
@@ -175,10 +170,12 @@ int main(int argc, char *argv[]){
 
     string imageFile= "jar.bmp";
     string quality= "10";
-    string OutputFile= "output.zzz";
+    string OutputFile= "out.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
+    tagCOMPRESSHEADER CH;
+
     BYTE* dataimg;
 
     //opening the file
@@ -232,6 +229,9 @@ int main(int argc, char *argv[]){
         bList[i]= 0;   
         gList[i]= 0;   
         rList[i]= 0;   
+        CH.redFreq[i] = 0;
+        CH.greenFreq[i] = 0;
+        CH.blueFreq[i] = 0;
     }
 
     //this for lop is responsible for adding the data to the frequency list
@@ -327,82 +327,54 @@ int main(int argc, char *argv[]){
     //writing the file
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
     //writing the file header
-    tagBITMAPFILEHEADER CFH;
-    tagBITMAPINFOHEADER CIH;
- //reading the first structs infomation (not mult of 4 data so we have to read one by one)
-    fwrite(&CFH.bfType,sizeof(CFH.bfType),1,fileOut);
-    fwrite(&CFH.bfSize,sizeof(CFH.bfSize),1,fileOut);
-    fwrite(&CFH.bfReserved1,sizeof(CFH.bfReserved1),1,fileOut);
-    fwrite(&CFH.bfReserved2,sizeof(CFH.bfReserved2),1,fileOut);
-    fwrite(&CFH.bfOffBits,sizeof(CFH.bfOffBits),1,fileOut);
-    //reading second structs data
-    fwrite(&CFH,sizeof(tagBITMAPFILEHEADER),1,fileOut);
-    fwrite(packedRed,bmih.biSizeImage,1,fileOut);
-    fwrite(packedGreen,bmih.biSizeImage,1,fileOut);
-    fwrite(packedBlue,bmih.biSizeImage,1,fileOut);
 
-    fwrite(bList,sizeof(bList),1,fileOut);
-    fwrite(gList,sizeof(gList),1,fileOut);
-    fwrite(rList,sizeof(rList),1,fileOut);
+
+    //putting putting things in the file header
+    CH.headerSize = sizeof(tagCOMPRESSHEADER);
+    CH.dataOffset = sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER) + sizeof(tagCOMPRESSHEADER);
+    // putting things in the info header
+    CH.redSize = rSize;
+    CH.greenSize = gSize;
+    CH.blueSize = bSize;
+    CH.width = bmih.biWidth;
+    CH.height = bmih.biHeight;
+
+ 
+    for (int i = 0; i < bSize; i++) {
+        int val = bList[i]->data;
+        CH.blueFreq[val] = bList[i]->freq;
+    }
+    for (int i = 0; i < gSize; i++) {
+        int val = gList[i]->data;
+        CH.greenFreq[val] = gList[i]->freq;
+    }
+    for (int i = 0; i < rSize; i++) {
+        int val = rList[i]->data;
+        CH.redFreq[val] = rList[i]->freq;
+    }
+
+    
+    
+    fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
+    fwrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,fileOut);
+    fwrite(&bmfh.bfReserved1,sizeof(bmfh.bfReserved1),1,fileOut);
+    fwrite(&bmfh.bfReserved2,sizeof(bmfh.bfReserved2),1,fileOut);
+    fwrite(&bmfh.bfOffBits,sizeof(bmfh.bfOffBits),1,fileOut);
+
+    fwrite(&bmih,sizeof(tagBITMAPINFOHEADER),1,fileOut);
+    fwrite(&CH, sizeof(tagCOMPRESSHEADER), 1, fileOut);
+
+    fwrite(packedRed, sizeof(BYTE), CH.redSize, fileOut);
+    fwrite(packedGreen, sizeof(BYTE), CH.greenSize, fileOut);
+    fwrite(packedBlue, sizeof(BYTE), CH.blueSize, fileOut);
     fclose(fileOut);
 
-    // //putting putting things in the file header
-    // CFH.fileSize = sizeof(CFH) + sizeof(CIH) + bitPosRed / 8 + bitPosGreen / 8 + bitPosBlue / 8;
-    // CFH.headerSize = sizeof(CIH);
-    // CFH.dataOffset = sizeof(CFH) + sizeof(CIH);
+    // Cleanup: munmap the image data.
+    munmap(dataimg, bmih.biSizeImage);
 
-    // // putting things in the info header
-    // CIH.width = bmih.biWidth;
-    // CIH.height = bmih.biHeight;
-    // CIH.redSize   = (bitPosRed / 8) + ((bitPosRed % 8) ? 1 : 0);
-    // CIH.greenSize = (bitPosGreen / 8) + ((bitPosGreen % 8) ? 1 : 0);
-    // CIH.blueSize  = (bitPosBlue / 8) + ((bitPosBlue % 8) ? 1 : 0);
-    // //CIH.compressionMethod = 1; // 1 = Huffman Coding
-
-    // // Initialize frequency tables to zero.
-    // for (int i = 0; i < 256; i++) {
-    //     CIH.redFreq[i] = 0;
-    //     CIH.greenFreq[i] = 0;
-    //     CIH.blueFreq[i] = 0;
-    // }
-    // // Fill frequency tables using the sorted lists.
-    // for (int i = 0; i < bSize; i++) {
-    //     int val = bList[i]->data;
-    //     CIH.blueFreq[val] = bList[i]->freq;
-    // }
-    // for (int i = 0; i < gSize; i++) {
-    //     int val = gList[i]->data;
-    //     CIH.greenFreq[val] = gList[i]->freq;
-    // }
-    // for (int i = 0; i < rSize; i++) {
-    //     int val = rList[i]->data;
-    //     CIH.redFreq[val] = rList[i]->freq;
-    // }
-
-    // fwrite(packedRed, sizeof(BYTE), CIH.redSize, fileOut);
-    // fwrite(packedGreen, sizeof(BYTE), CIH.greenSize, fileOut);
-    // fwrite(packedBlue, sizeof(BYTE), CIH.blueSize, fileOut);
-    // // Write headers to the output file.
-    // fwrite(&CFH, sizeof(CFH), 1, fileOut);
-    
-    // fwrite(&CIH, sizeof(CIH), 1, fileOut);
-
-
-
-
-
-
-    
-    //huffman tree
-    //already in data
-    // through loops in data array and rextracting colours
-    //after fors sort it 
-    //christian said use sort but i s8used qsort
-    //MUST USE TUPLE FOR SORT OR SOME SORT OF STRUCT
-    //take top 2 and build parent out of it
-    //sort after each iteration fo the huffman tree
-
-
-
+    // // Free the Huffman trees.
+    // freeTree(rRoot);
+    // freeTree(gRoot);
+    // freeTree(bRoot);
     return 0;
 }
