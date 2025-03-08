@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <vector>
 using namespace std;
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
@@ -58,6 +59,7 @@ struct tagCOMPRESSHEADER {
 struct HuffNode{
     int data;
     int freq;
+    int il,ir;
     struct HuffNode *left, *right;
 };
 
@@ -70,26 +72,45 @@ HuffNode *currentList;
 //     freeTree(root->right);
 //     delete root;
 // }
-int compare(const void *ptr1, const void *ptr2){
+// int compare(const void *ptr1, const void *ptr2){
+//     const HuffNode* n1 = *(const HuffNode **)ptr1;
+//     const HuffNode* n2 = *(const HuffNode **)ptr2;
+
+//     if(n1->freq < n2->freq){
+//         return -1;
+//     }
+//     else if(n1->freq == n2->freq){
+//         if(n1->data < n2->data){
+//             return -1;
+//         }
+//     }
+//     else{
+//         return 1;
+//     }
+// }
+int compare(const void *ptr1, const void *ptr2) {
     const HuffNode* n1 = *(const HuffNode **)ptr1;
     const HuffNode* n2 = *(const HuffNode **)ptr2;
-
-    if(n1->freq < n2->freq){
-        return -1;
-    }
-    else if(n1->freq == n2->freq){
-        if(n1->data < n2->data){
-            return -1;
-        }
-    }
-    else{
-        return 1;
-    }
+    if (n1->freq != n2->freq)
+        return (n1->freq - n2->freq);
+    return (n1->data - n2->data);
 }
+void preOrder(HuffNode* root, FILE* fileOut) {
+    if (!root) return;
 
+    // Write the node value (-1 for internal nodes)
+    if (root->left == NULL && root->right == NULL) {
+        int data = root->data;
+        fwrite(&data, sizeof(int), 1, fileOut);  // Write leaf node data
+    } else {
+        int internalNodeMarker = -1;
+        fwrite(&internalNodeMarker, sizeof(int), 1, fileOut);  // Internal node marker
+    }
 
-
-
+    // Recurse for left and right children
+    preOrder(root->left, fileOut);
+    preOrder(root->right, fileOut);
+}
 // Function to write a single bit into the packed data array
 void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
 
@@ -170,7 +191,7 @@ int main(int argc, char *argv[]){
 
     string imageFile= "jar.bmp";
     string quality= "10";
-    string OutputFile= "out.zzz";
+    string OutputFile= "aaa.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -290,6 +311,18 @@ int main(int argc, char *argv[]){
             rSize++;
         }
     }
+    for (int i = 0; i < bSize; i++) {
+        int val = bList[i]->data;
+        CH.blueFreq[i] = bList[i]->freq;
+    }
+    for (int i = 0; i < gSize; i++) {
+             int val = gList[i]->data;
+        CH.greenFreq[i] = gList[i]->freq;
+    }
+    for (int i = 0; i < rSize; i++) {
+         int val = rList[i]->data;
+        CH.redFreq[i] = rList[i]->freq;
+    }
 
     //build the trees
     HuffNode *rRoot =buildTree(rList, &rSize);
@@ -323,12 +356,10 @@ int main(int argc, char *argv[]){
         }
 
     }
+
     //at this point all the data should be packed and is ready to be written to the file
     //writing the file
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
-    //writing the file header
-
-
     //putting putting things in the file header
     CH.headerSize = sizeof(tagCOMPRESSHEADER);
     CH.dataOffset = sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER) + sizeof(tagCOMPRESSHEADER);
@@ -338,23 +369,8 @@ int main(int argc, char *argv[]){
     CH.blueSize = bSize;
     CH.width = bmih.biWidth;
     CH.height = bmih.biHeight;
-
  
-    for (int i = 0; i < bSize; i++) {
-        int val = bList[i]->data;
-        CH.blueFreq[val] = bList[i]->freq;
-    }
-    for (int i = 0; i < gSize; i++) {
-        int val = gList[i]->data;
-        CH.greenFreq[val] = gList[i]->freq;
-    }
-    for (int i = 0; i < rSize; i++) {
-        int val = rList[i]->data;
-        CH.redFreq[val] = rList[i]->freq;
-    }
 
-    
-    
     fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
     fwrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,fileOut);
     fwrite(&bmfh.bfReserved1,sizeof(bmfh.bfReserved1),1,fileOut);
@@ -364,17 +380,16 @@ int main(int argc, char *argv[]){
     fwrite(&bmih,sizeof(tagBITMAPINFOHEADER),1,fileOut);
     fwrite(&CH, sizeof(tagCOMPRESSHEADER), 1, fileOut);
 
+    preOrder(rRoot, fileOut);
+    preOrder(gRoot, fileOut);
+    preOrder(bRoot, fileOut);
+
     fwrite(packedRed, sizeof(BYTE), CH.redSize, fileOut);
     fwrite(packedGreen, sizeof(BYTE), CH.greenSize, fileOut);
     fwrite(packedBlue, sizeof(BYTE), CH.blueSize, fileOut);
     fclose(fileOut);
 
-    // Cleanup: munmap the image data.
-    munmap(dataimg, bmih.biSizeImage);
+    //munmap(dataimg, bmih.biSizeImage);
 
-    // // Free the Huffman trees.
-    // freeTree(rRoot);
-    // freeTree(gRoot);
-    // freeTree(bRoot);
     return 0;
 }

@@ -10,6 +10,7 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <vector>
 using namespace std;
 typedef unsigned char BYTE;
 typedef unsigned short WORD;
@@ -62,24 +63,38 @@ struct HuffNode{
 
 HuffNode *currentList;
 
-int compare(const void *ptr1, const void *ptr2){
+int compare(const void *ptr1, const void *ptr2) {
     const HuffNode* n1 = *(const HuffNode **)ptr1;
     const HuffNode* n2 = *(const HuffNode **)ptr2;
-
-    if(n1->freq < n2->freq){
-        return -1;
-    }
-    else if(n1->freq == n2->freq){
-        if(n1->data < n2->data){
-            return -1;
-        }
-    }
-    else{
-        return 1;
-    }
+    if (n1->freq != n2->freq)
+        return (n1->freq - n2->freq);
+    return (n1->data - n2->data);
 }
 
+HuffNode* postOrder(FILE* file) {
+    int value;
+    if (fread(&value, sizeof(int), 1, file) != 1) return NULL; // Read value from file and check for EOF
 
+    // If it's a leaf node (not -1), create and return a leaf HuffNode
+    if (value != -1) {
+        HuffNode* leaf = new HuffNode;
+        leaf->data = value;
+        leaf->freq = 0; // Frequency is unknown during deserialization
+        leaf->left = NULL;
+        leaf->right = NULL;
+        return leaf;
+    }
+
+    // If it's an internal node (-1), create a new node and recursively build left & right subtrees
+    HuffNode* node = new HuffNode;
+    node->data = -1;  // Internal node marker
+    node->freq = 0;   // Frequency is unknown during deserialization
+
+    node->left = postOrder(file);
+    node->right = postOrder(file);
+
+    return node;
+}
 
 
 // Function to write a single bit into the packed data array
@@ -154,16 +169,12 @@ void generateCode(HuffNode* root, string code,long length[], string huffData[]) 
     generateCode(root->right, code + "1", length, huffData);
 }
 
-
-
-
-
 int main(int argc, char *argv[]){
     //taking in inputs from terminal
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "out.zzz";
+    string imageFile= "aaa.zzz";
     string quality= "1";
     string OutputFile= "test.bmp";
     //declaring struct values
@@ -174,6 +185,7 @@ int main(int argc, char *argv[]){
     BYTE *redData;
     BYTE *greenData;
     BYTE *blueData;
+vector<int> serializedRedTree, serializedGreenTree, serializedBlueTree;
 
     //opening the file
     FILE* file=fopen(imageFile.c_str(),"rb");
@@ -195,7 +207,17 @@ int main(int argc, char *argv[]){
     greenData=(BYTE*)mmap(0,CH.greenSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
     blueData=(BYTE*)mmap(0,CH.blueSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
 
-    fwrite(&redData, sizeof(BYTE), CH.redSize, file);
+    // serializedRedTree.resize(521);
+    // fread(serializedRedTree.data(), sizeof(int), serializedRedTree.size(), file);
+    // serializedGreenTree.resize(512);
+    // fread(serializedGreenTree.data(), sizeof(int), serializedGreenTree.size(), file);
+    // serializedBlueTree.resize(512);
+    // fread(serializedBlueTree.data(), sizeof(int), serializedBlueTree.size(), file);  
+    HuffNode* rRoot = postOrder(file);
+    HuffNode* gRoot = postOrder(file);
+    HuffNode* bRoot = postOrder(file);
+
+    fwrite(redData, sizeof(BYTE), CH.redSize, file);
     fwrite(greenData, sizeof(BYTE), CH.greenSize, file);
     fwrite(blueData, sizeof(BYTE), CH.blueSize, file);
 
@@ -209,9 +231,6 @@ int main(int argc, char *argv[]){
     // } 
 
     //creating frequency lists
-    HuffNode* bList[256];
-    HuffNode* gList[256];
-    HuffNode* rList[256];
     string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
     long rHuffLen[256], gHuffLen[256], bHuffLen[256];
 
@@ -253,3 +272,11 @@ int main(int argc, char *argv[]){
              rList_out[bSize_out++] = node;
          }
     }
+int redIndex = 0, greenIndex = 0, blueIndex = 0;
+
+    //get the huffman codes from the tree
+    generateCode(rRoot, "",rHuffLen, rHuffCodes);
+    generateCode(gRoot, "",gHuffLen,gHuffCodes);
+    generateCode(bRoot, "",bHuffLen, bHuffCodes);
+    return 0;
+}
