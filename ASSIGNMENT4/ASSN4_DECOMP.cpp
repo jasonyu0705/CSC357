@@ -59,7 +59,12 @@ struct HuffNode{
 
 
 HuffNode *currentList;
-
+void freeHuffTree(HuffNode* node) {
+    if (!node) return;
+    freeHuffTree(node->left);
+    freeHuffTree(node->right);
+    delete node;
+}
 
 HuffNode* postOrder(FILE* file) {
     int value;
@@ -157,6 +162,7 @@ int main(int argc, char *argv[]){
     fread(&bmfh.bfReserved1,sizeof(bmfh.bfReserved1),1,file);
     fread(&bmfh.bfReserved2,sizeof(bmfh.bfReserved2),1,file);
     fread(&bmfh.bfOffBits,sizeof(bmfh.bfOffBits),1,file);
+
     fread(&bmih,sizeof(tagBITMAPINFOHEADER),1,file);
     fread(&CH, sizeof(tagCOMPRESSHEADER), 1, file);
     //the actual data
@@ -169,9 +175,9 @@ int main(int argc, char *argv[]){
     HuffNode* gRoot = postOrder(file);
     HuffNode* bRoot = postOrder(file);
 
-    fread(redData, sizeof(BYTE), CH.redSize, file);
-    fread(greenData, sizeof(BYTE), CH.greenSize, file);
     fread(blueData, sizeof(BYTE), CH.blueSize, file);
+    fread(greenData, sizeof(BYTE), CH.greenSize, file);
+    fread(redData, sizeof(BYTE), CH.redSize, file);
 
     fclose(file);
     //creating frequency lists
@@ -217,9 +223,9 @@ for (int y = 0; y < CH.height; y++) {
         }
 
         // Write decoded values into `dataimg`
-        dataimg[3*x+y*correctWidth] = (BYTE) bVal;
-        dataimg[3*x+y*correctWidth+1] =(BYTE) gVal;
-        dataimg[3*x+y*correctWidth+2] = (BYTE)rVal;
+        dataimg[3*x+y*correctWidth] = (BYTE) (fminf(fmaxf(bVal * 255, 0), 255));
+        dataimg[3*x+y*correctWidth+1] =(BYTE) (fminf(fmaxf(gVal * 255, 0), 255));
+        dataimg[3*x+y*correctWidth+2] = (BYTE) (fminf(fmaxf(rVal * 255, 0), 255));
     }
 }
 
@@ -234,6 +240,16 @@ for (int y = 0; y < CH.height; y++) {
     fwrite(&bmih,sizeof(tagBITMAPINFOHEADER),1,fileOut);
     fwrite(dataimg,bmih.biSizeImage,1,fileOut);
     fclose(fileOut);
+
+
+// Clean up Huffman trees
+    freeHuffTree(rRoot);
+    freeHuffTree(gRoot);
+    freeHuffTree(bRoot);
+    munmap(redData, CH.redSize);
+    munmap(greenData, CH.greenSize);
+    munmap(blueData, CH.blueSize);
+    munmap(dataimg, bmih.biSizeImage);
     return 0;
 }
  

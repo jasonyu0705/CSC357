@@ -50,9 +50,7 @@ struct tagCOMPRESSHEADER {
     LONG redSize;// Compressed size (in bytes) for the red channel.
     LONG greenSize;// Compressed size (in bytes) for the green channel.
     LONG blueSize;// Compressed size (in bytes) for the blue channel.
-    // LONG redFreq[256];
-    // LONG greenFreq[256];
-    // LONG blueFreq[256];
+
 
 };
 
@@ -184,6 +182,7 @@ int main(int argc, char *argv[]){
     string imageFile= "example.bmp";
     string quality= "10";
     string OutputFile= "yiy.zzz";
+    //cout<<sizeof(LONG)<<sizeof(DWORD)<<endl;
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -301,19 +300,6 @@ int main(int argc, char *argv[]){
             rSize++;
         }
     }
-    
-    // for (int i = 0; i < bSize; i++) {
-    //     int val = bList[i]->data;
-    //     CH.blueFreq[i] = bList[i]->freq;
-    // }
-    // for (int i = 0; i < gSize; i++) {
-    //          int val = gList[i]->data;
-    //     CH.greenFreq[i] = gList[i]->freq;
-    // }
-    // for (int i = 0; i < rSize; i++) {
-    //      int val = rList[i]->data;
-    //     CH.redFreq[i] = rList[i]->freq;
-    // }
 
     //build the trees
     HuffNode *rRoot =buildTree(rList, &rSize);
@@ -357,6 +343,9 @@ int main(int argc, char *argv[]){
     CH.redSize = (bitPosRed + 7) / 8;
     CH.greenSize = (bitPosGreen + 7) / 8;
     CH.blueSize = (bitPosBlue + 7) / 8;
+    // CH.redSize = sizeof(packedRed);
+    // CH.greenSize = sizeof(packedGreen);
+    // CH.blueSize = sizeof(packedBlue);
     
     CH.width = bmih.biWidth;
     CH.height = bmih.biHeight;
