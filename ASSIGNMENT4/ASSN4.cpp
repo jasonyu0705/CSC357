@@ -50,16 +50,15 @@ struct tagCOMPRESSHEADER {
     LONG redSize;// Compressed size (in bytes) for the red channel.
     LONG greenSize;// Compressed size (in bytes) for the green channel.
     LONG blueSize;// Compressed size (in bytes) for the blue channel.
-    LONG redFreq[256];
-    LONG greenFreq[256];
-    LONG blueFreq[256];
+    // LONG redFreq[256];
+    // LONG greenFreq[256];
+    // LONG blueFreq[256];
 
 };
 
 struct HuffNode{
     int data;
     int freq;
-
     struct HuffNode *left, *right;
 };
 
@@ -218,15 +217,15 @@ int main(int argc, char *argv[]){
     } 
 
     //creating frequency lists
-    HuffNode* bList[256];
-    HuffNode* gList[256];
-    HuffNode* rList[256];
+   HuffNode* bList[256] = {0};
+    HuffNode* gList[256] = {0};
+    HuffNode* rList[256] = {0};
     string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
     long rHuffLen[256], gHuffLen[256], bHuffLen[256];
 
-    BYTE packedRed[bmih.biSizeImage];
-    BYTE packedGreen[bmih.biSizeImage];
-    BYTE packedBlue[bmih.biSizeImage];
+     BYTE *packedRed = new BYTE[bmih.biSizeImage]();
+    BYTE *packedGreen = new BYTE[bmih.biSizeImage]();
+    BYTE *packedBlue = new BYTE[bmih.biSizeImage]();
 
     //initializing lists to 0
     memset(rHuffCodes, 0, 256);
@@ -243,9 +242,7 @@ int main(int argc, char *argv[]){
         bList[i]= 0;   
         gList[i]= 0;   
         rList[i]= 0;   
-        CH.redFreq[i] = 0;
-        CH.greenFreq[i] = 0;
-        CH.blueFreq[i] = 0;
+
     }
 
     //this for lop is responsible for adding the data to the frequency list
@@ -384,7 +381,7 @@ int main(int argc, char *argv[]){
     
     fclose(fileOut);
 
-    //munmap(dataimg, bmih.biSizeImage);
+    munmap(dataimg, bmih.biSizeImage);
 
     return 0;
 }

@@ -132,7 +132,7 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "zz.zzz";
+    string imageFile= "yiy.zzz";
     string quality= "1";
     string OutputFile= "tester.bmp";
     //declaring struct values
