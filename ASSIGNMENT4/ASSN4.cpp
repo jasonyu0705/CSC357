@@ -59,7 +59,7 @@ struct tagCOMPRESSHEADER {
 struct HuffNode{
     int data;
     int freq;
-    int il,ir;
+
     struct HuffNode *left, *right;
 };
 
@@ -189,9 +189,9 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "jar.bmp";
+    string imageFile= "example.bmp";
     string quality= "10";
-    string OutputFile= "aaa.zzz";
+    string OutputFile= "zz.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -364,9 +364,10 @@ int main(int argc, char *argv[]){
     CH.headerSize = sizeof(tagCOMPRESSHEADER);
     CH.dataOffset = sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER) + sizeof(tagCOMPRESSHEADER);
     // putting things in the info header
-    CH.redSize = rSize;
-    CH.greenSize = gSize;
-    CH.blueSize = bSize;
+    CH.redSize = bmih.biSizeImage;
+    CH.greenSize = bmih.biSizeImage;
+    CH.blueSize = bmih.biSizeImage;
+
     CH.width = bmih.biWidth;
     CH.height = bmih.biHeight;
  
@@ -384,9 +385,9 @@ int main(int argc, char *argv[]){
     preOrder(gRoot, fileOut);
     preOrder(bRoot, fileOut);
 
-    fwrite(packedRed, sizeof(BYTE), CH.redSize, fileOut);
-    fwrite(packedGreen, sizeof(BYTE), CH.greenSize, fileOut);
-    fwrite(packedBlue, sizeof(BYTE), CH.blueSize, fileOut);
+    fwrite(packedRed, bmih.biSizeImage,1, fileOut);
+    fwrite(packedGreen, bmih.biSizeImage, 1, fileOut);
+    fwrite(packedBlue, bmih.biSizeImage, 1, fileOut);
     fclose(fileOut);
 
     //munmap(dataimg, bmih.biSizeImage);

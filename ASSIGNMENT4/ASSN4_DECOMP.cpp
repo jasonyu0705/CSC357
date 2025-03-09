@@ -49,9 +49,6 @@ struct tagCOMPRESSHEADER {
     LONG redSize;// Compressed size (in bytes) for the red channel.
     LONG greenSize;// Compressed size (in bytes) for the green channel.
     LONG blueSize;// Compressed size (in bytes) for the blue channel.
-    LONG redFreq[256];
-    LONG greenFreq[256];
-    LONG blueFreq[256];
 };
 
 struct HuffNode{
@@ -63,23 +60,16 @@ struct HuffNode{
 
 HuffNode *currentList;
 
-int compare(const void *ptr1, const void *ptr2) {
-    const HuffNode* n1 = *(const HuffNode **)ptr1;
-    const HuffNode* n2 = *(const HuffNode **)ptr2;
-    if (n1->freq != n2->freq)
-        return (n1->freq - n2->freq);
-    return (n1->data - n2->data);
-}
 
 HuffNode* postOrder(FILE* file) {
     int value;
-    if (fread(&value, sizeof(int), 1, file) != 1) return NULL; // Read value from file and check for EOF
+    fread(&value, sizeof(int), 1, file); // Read value from file and check for EOF
 
     // If it's a leaf node (not -1), create and return a leaf HuffNode
     if (value != -1) {
         HuffNode* leaf = new HuffNode;
         leaf->data = value;
-        leaf->freq = 0; // Frequency is unknown during deserialization
+        leaf->freq = 0; 
         leaf->left = NULL;
         leaf->right = NULL;
         return leaf;
@@ -87,8 +77,8 @@ HuffNode* postOrder(FILE* file) {
 
     // If it's an internal node (-1), create a new node and recursively build left & right subtrees
     HuffNode* node = new HuffNode;
-    node->data = -1;  // Internal node marker
-    node->freq = 0;   // Frequency is unknown during deserialization
+    node->data = -1;  
+    node->freq = 0; 
 
     node->left = postOrder(file);
     node->right = postOrder(file);
@@ -96,87 +86,55 @@ HuffNode* postOrder(FILE* file) {
     return node;
 }
 
-
-// Function to write a single bit into the packed data array
-void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
-
-    int byteIndex = *bitPos / 8;   
-    
-    int shift=7-*bit_counter;
-    if (bit==1) {  // If bit is 1, set the bit at the correct position
-     BYTE bitMask= 1<<shift;
-        packedData[byteIndex] |= bitMask;
-    }
-    if(*bit_counter>=7){
-        *bit_counter=0;
-    }else{
-        *bit_counter=*bit_counter+1;
-    }
-    *bitPos=*bitPos+1;
-}
-
-// Function to write a full Huffman code (string) into the packed data array
-void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter) {
-    for (int i = 0; i < huffCode.size(); i++) {
-        char bit = huffCode[i];  // Get the character from the string
-        writeBit(bit - '0', packedData, bitPos,bit_counter);
-
-        
-        
-    }
-}
-
-
-// Function to build a Huffman tree for a specific color
-HuffNode* buildTree(HuffNode *huff[], int *size) {
-    // Sort non-null nodes first
-    qsort(huff, *size, sizeof(HuffNode *), compare);
-
-    // Build Huffman Tree
-    while (*size > 1) {
-        // Sort again to ensure smallest nodes are at the front
-        qsort(huff, *size, sizeof(HuffNode *), compare);
-
-        // Create a new internal node
-        HuffNode *newNode = (HuffNode *)malloc(sizeof(HuffNode));
-        newNode->freq = huff[0]->freq + huff[1]->freq;
-        newNode->data = -1;  // Internal nodes don't store color values
-        newNode->left = huff[0];
-        newNode->right = huff[1];
-
-        // Replace first two nodes with the new merged node
-        huff[0] = newNode;
-
-        // Shift array left to remove second merged node
-        for (int i = 1; i < *size - 1; i++) {
-            huff[i] = huff[i + 1];
+int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength,int *bitCount) {
+    HuffNode* current = root;
+    while (current) {
+        //leafnode 
+        if (current->data != -1) {
+            return current->data;  
         }
-        (*size)--;  // Reduce the list size
-    }
-    return huff[0];  // Return root of Huffman tree
-}
-//function that traverses the tree and creates codes for the values
-void generateCode(HuffNode* root, string code,long length[], string huffData[]) {
-    if (!root) return;
+
+        // Ensure we don't go out of bounds in the bitstring
+        if (*bitPos < bitLength) {
+
+            int bytePos = *bitPos / 8;       // Determine byte position
+            //int bit = (bitstring[bytePos] >> (7-*bitPos)) & 1; 
+            int shift=  7 - *bitCount;
+            int bit = (bitstring[bytePos] >>shift) & 1;  
+
+        // int byteIndex = *bitPos / 8;   
     
-    // Leaf node: store the Huffman code
-    if (root->left == NULL && root->right == NULL) {
-        huffData[root->data] = code;
-        length[root->data] = code.length();
+        // int shift=7-*bitCount;
+        // BYTE bitMask= 1<<shift;
+
+            if (bit == 0) {
+                current = current->left;
+            } else {
+                current = current->right;
+            }
+
+            if(*bitCount>=7){
+                *bitCount=0;
+            }else{
+                *bitCount=*bitCount+1;
+            }
+            *bitPos=*bitPos+1;
+            
+        } 
     }
-    // Recursively go left (add 0) and right (add 1)
-    generateCode(root->left, code + "0",length, huffData);
-    generateCode(root->right, code + "1", length, huffData);
+
+    return 100000;  
 }
+
 
 int main(int argc, char *argv[]){
     //taking in inputs from terminal
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "aaa.zzz";
+    string imageFile= "zz.zzz";
     string quality= "1";
-    string OutputFile= "test.bmp";
+    string OutputFile= "tester.bmp";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -185,7 +143,6 @@ int main(int argc, char *argv[]){
     BYTE *redData;
     BYTE *greenData;
     BYTE *blueData;
-vector<int> serializedRedTree, serializedGreenTree, serializedBlueTree;
 
     //opening the file
     FILE* file=fopen(imageFile.c_str(),"rb");
@@ -207,76 +164,76 @@ vector<int> serializedRedTree, serializedGreenTree, serializedBlueTree;
     greenData=(BYTE*)mmap(0,CH.greenSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
     blueData=(BYTE*)mmap(0,CH.blueSize,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
 
-    // serializedRedTree.resize(521);
-    // fread(serializedRedTree.data(), sizeof(int), serializedRedTree.size(), file);
-    // serializedGreenTree.resize(512);
-    // fread(serializedGreenTree.data(), sizeof(int), serializedGreenTree.size(), file);
-    // serializedBlueTree.resize(512);
-    // fread(serializedBlueTree.data(), sizeof(int), serializedBlueTree.size(), file);  
+
     HuffNode* rRoot = postOrder(file);
     HuffNode* gRoot = postOrder(file);
     HuffNode* bRoot = postOrder(file);
 
-    fwrite(redData, sizeof(BYTE), CH.redSize, file);
-    fwrite(greenData, sizeof(BYTE), CH.greenSize, file);
-    fwrite(blueData, sizeof(BYTE), CH.blueSize, file);
+    fread(redData, sizeof(BYTE), CH.redSize, file);
+    fread(greenData, sizeof(BYTE), CH.greenSize, file);
+    fread(blueData, sizeof(BYTE), CH.blueSize, file);
 
     fclose(file);
-
-    //correcting width with padding
-    //DONT THINK I NEED THIS BECAUSe I AM READING IN A DIFFERENT FILE TYPE BUT MAYBE NEED TO ADD PADDIGN BACK LATER 
-    // LONG correctWidth=3*bmih.biWidth;
-    // if (((bmih.biWidth)*3)%4!=0 ){
-    //     correctWidth = 3* bmih.biWidth+ (4-((bmih.biWidth)*3)%4);
-    // } 
-
     //creating frequency lists
     string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
     long rHuffLen[256], gHuffLen[256], bHuffLen[256];
+    BYTE* dataimg=(BYTE*)mmap(0,bmih.biSizeImage,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
 
     //initializing lists to 0
-    memset(rHuffCodes, 0, 256);
-    memset(gHuffCodes, 0,256);
-    memset(bHuffCodes, 0, 256);
-    memset(gHuffLen, 0, 256);
-    memset(rHuffLen, 0, 256);
-    memset(bHuffLen, 0, 256);
-
-     // --- Integrated Frequency List and Huffman Tree Reconstruction ---
-    // Create arrays to hold pointers to HuffNodes for each color channel.
-    HuffNode* bList_out[256];
-    HuffNode* gList_out[256];
-    HuffNode* rList_out[256];
-    int rSize_out = 0, gSize_out = 0, bSize_out = 0;
-    // populating node list
-    for (int i = 0; i < 256; i++) {
-         if (CH.redFreq[i] > 0) {
-             HuffNode* node = new HuffNode;
-             node->data = i;
-             node->freq = CH.redFreq[i];
-             node->left = node->right = nullptr;
-             bList_out[rSize_out++] = node;
-         }
-         if (CH.greenFreq[i] > 0) {
-             HuffNode* node = new HuffNode;
-             node->data = i;
-             node->freq = CH.greenFreq[i];
-             node->left = node->right = nullptr;
-             gList_out[gSize_out++] = node;
-         }
-         if (CH.blueFreq[i] > 0) {
-             HuffNode* node = new HuffNode;
-             node->data = i;
-             node->freq = CH.blueFreq[i];
-             node->left = node->right = nullptr;
-             rList_out[bSize_out++] = node;
-         }
+for (int i = 0; i < 256; i++) {
+    rHuffCodes[i] = "";
+    gHuffCodes[i] = "";
+    bHuffCodes[i] = "";
+    rHuffLen[i] = 0;
+    gHuffLen[i] = 0;
+    bHuffLen[i] = 0;
+}
+    
+//switch everything to otehr width
+    LONG correctWidth=3*CH.width;
+    if (((CH.width)*3)%4!=0 ){
+        correctWidth = 3* CH.width+ (4-((CH.width)*3)%4);
     }
-int redIndex = 0, greenIndex = 0, blueIndex = 0;
 
-    //get the huffman codes from the tree
-    generateCode(rRoot, "",rHuffLen, rHuffCodes);
-    generateCode(gRoot, "",gHuffLen,gHuffCodes);
-    generateCode(bRoot, "",bHuffLen, bHuffCodes);
+    long bIndex = 0, gIndex = 0, rIndex = 0;  // Track positions in the bitstream
+    int bitPosRed = 0, bitPosGreen = 0, bitPosBlue = 0;
+    int rBitCount,bBitCount,gBitCount;//0 to 7
+    rBitCount=0;
+    bBitCount=0;
+    gBitCount=0;
+// Decode blue channel
+// int bitLength = CH.blueSize * 8;  // Total number of bits in blue channel
+
+// Decode and write to image data array directly
+for (int y = 0; y < CH.height; y++) {  
+    for (int x = 0; x < CH.width; x++) {  
+        int bVal = decode(bRoot, blueData, &bitPosBlue, CH.blueSize * 8,&bBitCount);
+        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8,&gBitCount);
+        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8,&rBitCount);
+
+        if (bVal == -1 || gVal == -1 || rVal == -1) {
+            cout << "Error decoding pixel at (" << x << "," << y << ")" << endl;
+            return 1;
+        }
+
+        // Write decoded values into `dataimg`
+        dataimg[3*x+y*correctWidth] = (BYTE) bVal;
+        dataimg[3*x+y*correctWidth+1] =(BYTE) gVal;
+        dataimg[3*x+y*correctWidth+2] = (BYTE)rVal;
+    }
+}
+
+ FILE* fileOut=fopen(OutputFile.c_str(),"wb");
+ //reading the first structs infomation (not mult of 4 data so we have to read one by one)
+    fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
+    fwrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,fileOut);
+    fwrite(&bmfh.bfReserved1,sizeof(bmfh.bfReserved1),1,fileOut);
+    fwrite(&bmfh.bfReserved2,sizeof(bmfh.bfReserved2),1,fileOut);
+    fwrite(&bmfh.bfOffBits,sizeof(bmfh.bfOffBits),1,fileOut);
+    //reading second structs data
+    fwrite(&bmih,sizeof(tagBITMAPINFOHEADER),1,fileOut);
+    fwrite(dataimg,bmih.biSizeImage,1,fileOut);
+    fclose(fileOut);
     return 0;
 }
+ 
