@@ -65,13 +65,6 @@ struct HuffNode{
 
 
 HuffNode *currentList;
-// // Recursive function to free all nodes in a Huffman tree.
-// void freeTree(HuffNode* root) {
-//     if (!root) return;
-//     freeTree(root->left);
-//     freeTree(root->right);
-//     delete root;
-// }
 // int compare(const void *ptr1, const void *ptr2){
 //     const HuffNode* n1 = *(const HuffNode **)ptr1;
 //     const HuffNode* n2 = *(const HuffNode **)ptr2;
@@ -103,8 +96,8 @@ void preOrder(HuffNode* root, FILE* fileOut) {
         int data = root->data;
         fwrite(&data, sizeof(int), 1, fileOut);  // Write leaf node data
     } else {
-        int internalNodeMarker = -1;
-        fwrite(&internalNodeMarker, sizeof(int), 1, fileOut);  // Internal node marker
+        int intdata = -1;
+        fwrite(&intdata, sizeof(int), 1, fileOut);  // Internal node marker
     }
 
     // Recurse for left and right children
@@ -191,7 +184,7 @@ int main(int argc, char *argv[]){
 
     string imageFile= "example.bmp";
     string quality= "10";
-    string OutputFile= "zz.zzz";
+    string OutputFile= "yiy.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -299,30 +292,31 @@ int main(int argc, char *argv[]){
     int rSize = 0, gSize = 0, bSize = 0;
     for (int i = 0; i < 256; i++) {
         if (bList[i] != NULL) {
-            bList[bSize] = bList[i];  // Move non-null nodes to the front
+            bList[bSize] = bList[i];  
             bSize++;
         }
         if (gList[i] != NULL) {
-            gList[gSize] = gList[i];  // Move non-null nodes to the front
+            gList[gSize] = gList[i];  
             gSize++;
         }
         if (rList[i] != NULL) {
-            rList[rSize] = rList[i];  // Move non-null nodes to the front
+            rList[rSize] = rList[i]; 
             rSize++;
         }
     }
-    for (int i = 0; i < bSize; i++) {
-        int val = bList[i]->data;
-        CH.blueFreq[i] = bList[i]->freq;
-    }
-    for (int i = 0; i < gSize; i++) {
-             int val = gList[i]->data;
-        CH.greenFreq[i] = gList[i]->freq;
-    }
-    for (int i = 0; i < rSize; i++) {
-         int val = rList[i]->data;
-        CH.redFreq[i] = rList[i]->freq;
-    }
+    
+    // for (int i = 0; i < bSize; i++) {
+    //     int val = bList[i]->data;
+    //     CH.blueFreq[i] = bList[i]->freq;
+    // }
+    // for (int i = 0; i < gSize; i++) {
+    //          int val = gList[i]->data;
+    //     CH.greenFreq[i] = gList[i]->freq;
+    // }
+    // for (int i = 0; i < rSize; i++) {
+    //      int val = rList[i]->data;
+    //     CH.redFreq[i] = rList[i]->freq;
+    // }
 
     //build the trees
     HuffNode *rRoot =buildTree(rList, &rSize);
@@ -342,12 +336,10 @@ int main(int argc, char *argv[]){
     //convert this to huffman data
     for (int y = 0; y <  bmih.biHeight; y++) {  // Loop through rows
         for (int x = 0; x <  bmih.biWidth; x++) {  // Loop through columns
-            // Extract RGB values from the image data array
-            BYTE bVal = dataimg[3 * x + y * correctWidth];      // Blue
-            BYTE gVal = dataimg[3 * x + y * correctWidth + 1];  // Green
-            BYTE rVal = dataimg[3 * x + y * correctWidth + 2];  // Red
+            BYTE bVal = dataimg[3 * x + y * correctWidth];   
+            BYTE gVal = dataimg[3 * x + y * correctWidth + 1]; 
+            BYTE rVal = dataimg[3 * x + y * correctWidth + 2];  
 
-            // Pack Huffman-encoded bits directly into unsigned char arrays
             packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bit_counter);
             packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bit_counter);
             packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bit_counter); 
@@ -363,14 +355,14 @@ int main(int argc, char *argv[]){
     //putting putting things in the file header
     CH.headerSize = sizeof(tagCOMPRESSHEADER);
     CH.dataOffset = sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER) + sizeof(tagCOMPRESSHEADER);
-    // putting things in the info header
-    CH.redSize = bmih.biSizeImage;
-    CH.greenSize = bmih.biSizeImage;
-    CH.blueSize = bmih.biSizeImage;
 
+    // putting things in the info header
+    CH.redSize = (bitPosRed + 7) / 8;
+    CH.greenSize = (bitPosGreen + 7) / 8;
+    CH.blueSize = (bitPosBlue + 7) / 8;
+    
     CH.width = bmih.biWidth;
     CH.height = bmih.biHeight;
- 
 
     fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
     fwrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,fileOut);
@@ -385,9 +377,11 @@ int main(int argc, char *argv[]){
     preOrder(gRoot, fileOut);
     preOrder(bRoot, fileOut);
 
-    fwrite(packedRed, bmih.biSizeImage,1, fileOut);
-    fwrite(packedGreen, bmih.biSizeImage, 1, fileOut);
-    fwrite(packedBlue, bmih.biSizeImage, 1, fileOut);
+    fwrite(packedBlue,sizeof(BYTE),  CH.blueSize, fileOut);
+    fwrite(packedGreen, sizeof(BYTE), CH.greenSize, fileOut);
+    fwrite(packedRed,sizeof(BYTE),CH.redSize, fileOut);
+
+    
     fclose(fileOut);
 
     //munmap(dataimg, bmih.biSizeImage);
