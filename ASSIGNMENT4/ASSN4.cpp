@@ -45,11 +45,11 @@ struct tagBITMAPINFOHEADER{
 struct tagCOMPRESSHEADER {
     DWORD headerSize;// Size of the info header.
     DWORD dataOffset;// Offset from the beginning of the file to the compressed data.
-    LONG width;// Original image width.
-    LONG height;// Original image height.
-    LONG redSize;// Compressed size (in bytes) for the red channel.
-    LONG greenSize;// Compressed size (in bytes) for the green channel.
-    LONG blueSize;// Compressed size (in bytes) for the blue channel.
+    LONG width;// Original image width
+    LONG height;// Original image height
+    LONG redSize;// Compressed size (in bytes) for the red
+    LONG greenSize;// Compressed size (in bytes) for the green
+    LONG blueSize;// Compressed size (in bytes) for the blue 
 
 
 };
@@ -88,26 +88,23 @@ int compare(const void *ptr1, const void *ptr2) {
 void preOrder(HuffNode* root, FILE* fileOut) {
     if (!root) return;
 
-    // Write the node value (-1 for internal nodes)
     if (root->left == NULL && root->right == NULL) {
         int data = root->data;
-        fwrite(&data, sizeof(int), 1, fileOut);  // Write leaf node data
+        fwrite(&data, sizeof(int), 1, fileOut); 
     } else {
         int intdata = -1;
-        fwrite(&intdata, sizeof(int), 1, fileOut);  // Internal node marker
+        fwrite(&intdata, sizeof(int), 1, fileOut);  
     }
-
-    // Recurse for left and right children
     preOrder(root->left, fileOut);
     preOrder(root->right, fileOut);
 }
-// Function to write a single bit into the packed data array
+
 void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
 
     int byteIndex = *bitPos / 8;   
     
     int shift=7-*bit_counter;
-    if (bit==1) {  // If bit is 1, set the bit at the correct position
+    if (bit==1) {  
      BYTE bitMask= 1<<shift;
         packedData[byteIndex] |= bitMask;
     }
@@ -119,7 +116,6 @@ void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
     *bitPos=*bitPos+1;
 }
 
-// Function to write a full Huffman code (string) into the packed data array
 void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter) {
     for (int i = 0; i < huffCode.size(); i++) {
         char bit = huffCode[i];  // Get the character from the string
@@ -128,50 +124,37 @@ void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter)
 }
 
 
-// Function to build a Huffman tree for a specific color
 HuffNode* buildTree(HuffNode *huff[], int *size) {
-    // Sort non-null nodes first
     qsort(huff, *size, sizeof(HuffNode *), compare);
-
-    // Build Huffman Tree
     while (*size > 1) {
-        // Sort again to ensure smallest nodes are at the front
         qsort(huff, *size, sizeof(HuffNode *), compare);
-
-        // Create a new internal node
         HuffNode *newNode = (HuffNode *)malloc(sizeof(HuffNode));
         newNode->freq = huff[0]->freq + huff[1]->freq;
         newNode->data = -1;  // Internal nodes don't store color values
         newNode->left = huff[0];
         newNode->right = huff[1];
-
-        // Replace first two nodes with the new merged node
         huff[0] = newNode;
 
-        // Shift array left to remove second merged node
         for (int i = 1; i < *size - 1; i++) {
             huff[i] = huff[i + 1];
         }
 
-        (*size)--;  // Reduce the list size
+        (*size)--;  
     }
 
-    return huff[0];  // Return root of Huffman tree
+    return huff[0]; 
 }
-//function that traverses the tree and creates codes for the values
-void generateCode(HuffNode* root, string code,long length[], string huffData[]) {
+void huffEncode(HuffNode* root, string code,long length[], string huffData[]) {
     if (!root) return;
-    
-    // Leaf node: store the Huffman code
+    //leaf
     if (root->left == NULL && root->right == NULL) {
         huffData[root->data] = code;
         length[root->data] = code.length();
 
     }
     
-    // Recursively go left (add 0) and right (add 1)
-    generateCode(root->left, code + "0",length, huffData);
-    generateCode(root->right, code + "1", length, huffData);
+    huffEncode(root->left, code + "0",length, huffData);
+    huffEncode(root->right, code + "1", length, huffData);
 }
 
 int main(int argc, char *argv[]){
@@ -179,10 +162,9 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "jar.bmp";
+    string imageFile= "tunnel.bmp";
     string quality= "10";
-    string OutputFile= "yiy.zzz";
-    //cout<<sizeof(LONG)<<sizeof(DWORD)<<endl;
+    string OutputFile= "working.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -234,9 +216,6 @@ int main(int argc, char *argv[]){
     memset(rHuffLen, 0, 256);
     memset(bHuffLen, 0, 256);
 
-    //creating size counters for freqwuency noirtes
-
-    //put default values in the frequency list
     for (int i = 0; i < 256; i++) {
         bList[i]= 0;   
         gList[i]= 0;   
@@ -307,19 +286,17 @@ int main(int argc, char *argv[]){
     HuffNode *bRoot =buildTree(bList, &bSize);
 
     //get the huffman codes from the tree
-    generateCode(rRoot, "",rHuffLen, rHuffCodes);
-    generateCode(gRoot, "",gHuffLen,gHuffCodes);
-    generateCode(bRoot, "",bHuffLen, bHuffCodes);
+    huffEncode(rRoot, "",rHuffLen, rHuffCodes);
+    huffEncode(gRoot, "",gHuffLen,gHuffCodes);
+    huffEncode(bRoot, "",bHuffLen, bHuffCodes);
  
    //bit position poinrters
     int bitPosRed = 0, bitPosGreen = 0, bitPosBlue = 0;
     int bitCounterRed = 0, bitCounterGreen = 0, bitCounterBlue = 0;
-    // int bit_counter;
 
-    // bit_counter=0;
     //convert this to huffman data
-    for (int y = 0; y <  bmih.biHeight; y++) {  // Loop through rows
-        for (int x = 0; x <  bmih.biWidth; x++) {  // Loop through columns
+    for (int y = 0; y <  bmih.biHeight; y++) {  
+        for (int x = 0; x <  bmih.biWidth; x++) {  
             BYTE bVal = dataimg[3 * x + y * correctWidth];   
             BYTE gVal = dataimg[3 * x + y * correctWidth + 1]; 
             BYTE rVal = dataimg[3 * x + y * correctWidth + 2];  
@@ -327,12 +304,8 @@ int main(int argc, char *argv[]){
             packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bitCounterBlue);
             packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bitCounterGreen);
             packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bitCounterRed); 
-
-         
         }
-
     }
-
     //at this point all the data should be packed and is ready to be written to the file
     //writing the file
     FILE* fileOut=fopen(OutputFile.c_str(),"wb");
@@ -344,9 +317,7 @@ int main(int argc, char *argv[]){
     CH.redSize = (bitPosRed + 7) / 8;
     CH.greenSize = (bitPosGreen + 7) / 8;
     CH.blueSize = (bitPosBlue + 7) / 8;
-    // CH.redSize = sizeof(packedRed);
-    // CH.greenSize = sizeof(packedGreen);
-    // CH.blueSize = sizeof(packedBlue);
+
     
     CH.width = bmih.biWidth;
     CH.height = bmih.biHeight;
@@ -367,7 +338,6 @@ int main(int argc, char *argv[]){
     fwrite(packedBlue,sizeof(BYTE),  CH.blueSize, fileOut);
     fwrite(packedGreen, sizeof(BYTE), CH.greenSize, fileOut);
     fwrite(packedRed,sizeof(BYTE),CH.redSize, fileOut);
-
     
     fclose(fileOut);
 

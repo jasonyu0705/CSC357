@@ -68,9 +68,8 @@ void freeHuffTree(HuffNode* node) {
 
 HuffNode* postOrder(FILE* file) {
     int value;
-    fread(&value, sizeof(int), 1, file); // Read value from file and check for EOF
-
-    // If it's a leaf node (not -1), create and return a leaf HuffNode
+    fread(&value, sizeof(int), 1, file); 
+    //leaf
     if (value != -1) {
         HuffNode* leaf = new HuffNode;
         leaf->data = value;
@@ -79,15 +78,12 @@ HuffNode* postOrder(FILE* file) {
         leaf->right = NULL;
         return leaf;
     }
-
-    // If it's an internal node (-1), create a new node and recursively build left & right subtrees
+    //internal
     HuffNode* node = new HuffNode;
     node->data = -1;  
     node->freq = 0; 
-
     node->left = postOrder(file);
     node->right = postOrder(file);
-
     return node;
 }
 
@@ -99,7 +95,6 @@ int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength,int *bitC
             return current->data;  
         }
 
-        // Ensure we don't go out of bounds in the bitstring
         if (*bitPos < bitLength) {
 
             int bytePos = *bitPos / 8;       // Determine byte position
@@ -137,9 +132,9 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "yiy.zzz";
-    string quality= "1";
-    string OutputFile= "tester.bmp";
+    string imageFile= "working.zzz";
+    //string quality= "1";
+    string OutputFile= "works.bmp";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
     tagBITMAPINFOHEADER bmih;
@@ -207,7 +202,6 @@ for (int i = 0; i < 256; i++) {
     rBitCount=0;
     bBitCount=0;
     gBitCount=0;
-// Decode blue channel
 // int bitLength = CH.blueSize * 8;  // Total number of bits in blue channel
 
 // Decode and write to image data array directly
@@ -222,13 +216,10 @@ for (int y = 0; y < CH.height; y++) {
             return 1;
         }
 
-        // Write decoded values into `dataimg`
-        // dataimg[3*x+y*correctWidth] = (BYTE) (fminf(fmaxf(bVal * 255, 0), 255));
-        // dataimg[3*x+y*correctWidth+1] =(BYTE) (fminf(fmaxf(gVal * 255, 0), 255));
-        // dataimg[3*x+y*correctWidth+2] = (BYTE) (fminf(fmaxf(rVal * 255, 0), 255));
-        dataimg[3*x+y*correctWidth] = (BYTE) (fminf(fmaxf(bVal * 255, 0), 255));
-        dataimg[3*x+y*correctWidth+1] =(BYTE) (fminf(fmaxf(gVal * 255, 0), 255));
-        dataimg[3*x+y*correctWidth+2] = (BYTE) (fminf(fmaxf(rVal * 255, 0), 255));
+        
+        dataimg[3*x+y*correctWidth] = (BYTE) bVal;
+        dataimg[3*x+y*correctWidth+1] =(BYTE) gVal;
+        dataimg[3*x+y*correctWidth+2] = (BYTE) rVal;
     }
 }
 
