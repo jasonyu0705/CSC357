@@ -179,7 +179,7 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "example.bmp";
+    string imageFile= "jar.bmp";
     string quality= "10";
     string OutputFile= "yiy.zzz";
     //cout<<sizeof(LONG)<<sizeof(DWORD)<<endl;
@@ -313,9 +313,10 @@ int main(int argc, char *argv[]){
  
    //bit position poinrters
     int bitPosRed = 0, bitPosGreen = 0, bitPosBlue = 0;
-    int bit_counter;
+    int bitCounterRed = 0, bitCounterGreen = 0, bitCounterBlue = 0;
+    // int bit_counter;
 
-    bit_counter=0;
+    // bit_counter=0;
     //convert this to huffman data
     for (int y = 0; y <  bmih.biHeight; y++) {  // Loop through rows
         for (int x = 0; x <  bmih.biWidth; x++) {  // Loop through columns
@@ -323,9 +324,9 @@ int main(int argc, char *argv[]){
             BYTE gVal = dataimg[3 * x + y * correctWidth + 1]; 
             BYTE rVal = dataimg[3 * x + y * correctWidth + 2];  
 
-            packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bit_counter);
-            packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bit_counter);
-            packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bit_counter); 
+            packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bitCounterBlue);
+            packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bitCounterGreen);
+            packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bitCounterRed); 
 
          
         }

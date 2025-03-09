@@ -223,6 +223,9 @@ for (int y = 0; y < CH.height; y++) {
         }
 
         // Write decoded values into `dataimg`
+        // dataimg[3*x+y*correctWidth] = (BYTE) (fminf(fmaxf(bVal * 255, 0), 255));
+        // dataimg[3*x+y*correctWidth+1] =(BYTE) (fminf(fmaxf(gVal * 255, 0), 255));
+        // dataimg[3*x+y*correctWidth+2] = (BYTE) (fminf(fmaxf(rVal * 255, 0), 255));
         dataimg[3*x+y*correctWidth] = (BYTE) (fminf(fmaxf(bVal * 255, 0), 255));
         dataimg[3*x+y*correctWidth+1] =(BYTE) (fminf(fmaxf(gVal * 255, 0), 255));
         dataimg[3*x+y*correctWidth+2] = (BYTE) (fminf(fmaxf(rVal * 255, 0), 255));
