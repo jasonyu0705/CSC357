@@ -168,7 +168,7 @@ int main(int argc, char *argv[]){
     // string quality= argv[2];
 
     string imageFile= "flowers.bmp";
-    string quality= "1";
+    string quality= "10";
     string OutputFile= "working.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
@@ -215,9 +215,12 @@ int main(int argc, char *argv[]){
     BYTE *packedBlue = new BYTE[bmih.biSizeImage]();
 
     //initializing lists to 0
-    memset(rHuffCodes, 0, 256);
-    memset(gHuffCodes, 0,256);
-    memset(bHuffCodes, 0, 256);
+for (int i = 0; i < 256; i++) {
+    rHuffCodes[i] = "";
+    gHuffCodes[i] = "";
+    bHuffCodes[i] = "";
+}
+
     memset(gHuffLen, 0, 256);
     memset(rHuffLen, 0, 256);
     memset(bHuffLen, 0, 256);
@@ -329,9 +332,9 @@ int main(int argc, char *argv[]){
     CH.dataOffset = sizeof(tagBITMAPFILEHEADER) + sizeof(tagBITMAPINFOHEADER) + sizeof(tagCOMPRESSHEADER);
 
     // putting things in the info header
-    CH.redSize = (bitPosRed + 7) / 8;
-    CH.greenSize = (bitPosGreen + 7) / 8;
-    CH.blueSize = (bitPosBlue + 7) / 8;
+    CH.redSize = (bitPosRed /8) +1;
+    CH.greenSize = (bitPosGreen /8) +1;
+    CH.blueSize = (bitPosBlue /8) +1;
 
     
     CH.width = bmih.biWidth;

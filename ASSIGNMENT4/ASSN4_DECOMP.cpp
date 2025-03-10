@@ -73,10 +73,6 @@ HuffNode* postOrder(FILE* file) {
     //leaf
     if (value != -1) {
         HuffNode* leaf = new HuffNode;
-        if (leaf->left==NULL && leaf->right==NULL){
-            return NULL;
-          
-        }
         leaf->data = value;
         leaf->freq = 0; 
         leaf->left = NULL;
@@ -96,44 +92,108 @@ HuffNode* postOrder(FILE* file) {
     return node;
 }
 
-int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength,int *bitCount) {
-    HuffNode* current = root;
-    while (current) {
-        cout<<"hi not working"<<endl;
+// int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength,int *bitCount) {
+//     HuffNode* current = root;
+//     while (current) {
+//         cout<<"hi not working"<<endl;
 
-        //leafnode 
-        if (current->data != -1) {
-            return current->data;  
-        }
-if (*bitPos > bitLength) {  // End of bitstream
-            cout << "Error: Bitstream exhausted at pos " << *bitPos << endl;
-            return -1;  // Sentinel value for error
-        }
-        //if (*bitPos < bitLength) {
+//         //leafnode 
+//         if (current->data != -1) {
+//             return current->data;  
+//         }
+// if (*bitPos > bitLength) {  // End of bitstream
+//             cout << "Error: Bitstream exhausted at pos " << *bitPos << endl;
+//             return -1;  // Sentinel value for error
+//         }
+//         //if (*bitPos < bitLength) {
 
-            int bytePos = *bitPos / 8;       // Determine byte position
-            //int bit = (bitstring[bytePos] >> (7-*bitPos)) & 1; 
-            int shift=  7 - *bitCount;
-            int bit = (bitstring[bytePos] >>shift) & 1;  
+//             int bytePos = *bitPos / 8;       // Determine byte position
+//             int shift=  7 - *bitCount;
+//             int bit = (bitstring[bytePos] >>shift) & 1;  
 
 
-            if (bit == 0) {
-                current = current->left;
-            } else {
-                current = current->right;
-            }
+//             if (bit == 0) {
+//                 current = current->left;
+//             } else {
+//                 current = current->right;
+//             }
 
-            if(*bitCount>=7){
-                *bitCount=0;
-            }else{
-                *bitCount=*bitCount+1;
-            }
-            *bitPos=*bitPos+1;
+//             if(*bitCount>=7){
+//                 *bitCount=0;
+//             }else{
+//                 *bitCount=*bitCount+1;
+//             }
+//             *bitPos=*bitPos+1;
             
-        //} 
-    }
+//         //} 
+//     }
 
-    return 100000;  
+//     return 100000;  
+// }
+// int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength, int *bitCount) {
+//     HuffNode* current = root;
+//     // Traverse until we hit a leaf (node with valid data)
+//     while (current && current->data == -1) {  
+//         // Check boundary: if we've reached or exceeded the total bits available, exit.
+//         if (*bitPos >= bitLength) {
+//             cerr << "Error: Bitstream exhausted at pos " << *bitPos << endl;
+//             return -1;  // Error value
+//         }
+//         int bytePos = *bitPos / 8;       // Determine byte index in bitstring
+//         int shift = 7 - *bitCount;         // Determine bit position within that byte
+//         int bit = (bitstring[bytePos] >> shift) & 1;  // Extract the bit
+
+//         // Move left for 0 and right for 1, but check if children exist
+//         if (bit == 0) {
+//             if (current->left == NULL) {
+//                 cerr << "Error: Expected left child but got NULL at bitPos " << *bitPos << endl;
+//                 return -1;
+//             }
+//             current = current->left;
+//         } else {
+//             if (current->right == NULL) {
+//                 cerr << "Error: Expected right child but got NULL at bitPos " << *bitPos << endl;
+//                 return -1;
+//             }
+//             current = current->right;
+//         }
+        
+//         // Advance the bit counters
+//         (*bitPos)++;
+//         (*bitCount)++;
+//         if (*bitCount >= 8) {  // Reset bitCount when we pass a byte boundary
+//             *bitCount = 0;
+//         }
+//     }
+    
+//     // If we've reached a valid leaf, return its data.
+//     if (current)
+//         return current->data;
+//     else
+//         return -1;
+// }
+// Revised decode function without an extra bitCount parameter.
+int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength) {
+    HuffNode* current = root;
+    // Traverse the tree until we reach a leaf (node where data != -1)
+    while (current && current->data == -1) {
+        // Check that we are not overruning the bitstream.
+        if (*bitPos >= bitLength) {
+            cerr << "Error: Bitstream exhausted at pos " << *bitPos << endl;
+            return -1;
+        }
+        int bytePos = *bitPos / 8;
+        int bitIndex = *bitPos % 8;  // Bit index within the current byte.
+        int bit = (bitstring[bytePos] >> (7 - bitIndex)) & 1;  // Extract the bit.
+        (*bitPos)++;  // Advance one bit.
+        // Follow the appropriate branch of the Huffman tree.
+        if (bit == 0)
+            current = current->left;
+        else
+            current = current->right;
+    }
+    if (!current) return -1;
+    return current->data;
 }
 
 
@@ -217,9 +277,9 @@ int quality_factor = 11 - CH.QF;
 // Decode and write to image data array directly
 for (int y = 0; y < CH.height; y++) {  
     for (int x = 0; x < CH.width; x++) {  
-        int bVal = decode(bRoot, blueData, &bitPosBlue, CH.blueSize * 8,&bBitCount) * quality_factor;
-        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8,&gBitCount)* quality_factor;
-        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8,&rBitCount)* quality_factor;
+        int bVal = decode(bRoot, blueData, &bitPosBlue, CH.blueSize * 8) * quality_factor;
+        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8)* quality_factor;
+        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8)* quality_factor;
 
         // if (bVal == -1 || gVal == -1 || rVal == -1) {
         //     cout << "Error decoding pixel at (" << x << "," << y << ")" << endl;
