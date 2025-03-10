@@ -49,6 +49,7 @@ struct tagCOMPRESSHEADER {
     LONG redSize;// Compressed size (in bytes) for the red channel.
     LONG greenSize;// Compressed size (in bytes) for the green channel.
     LONG blueSize;// Compressed size (in bytes) for the blue channel.
+    int QF;//quality factor
 };
 
 struct HuffNode{
@@ -217,9 +218,9 @@ for (int y = 0; y < CH.height; y++) {
         }
 
         
-        dataimg[3*x+y*correctWidth] = (BYTE) bVal;
-        dataimg[3*x+y*correctWidth+1] =(BYTE) gVal;
-        dataimg[3*x+y*correctWidth+2] = (BYTE) rVal;
+        dataimg[3*x+y*correctWidth] = (BYTE) (bVal)*(11-CH.QF);
+        dataimg[3*x+y*correctWidth+1] =(BYTE) (gVal)*(11-CH.QF);
+        dataimg[3*x+y*correctWidth+2] = (BYTE) (rVal)*(11-CH.QF);
     }
 }
 

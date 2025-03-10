@@ -50,8 +50,7 @@ struct tagCOMPRESSHEADER {
     LONG redSize;// Compressed size (in bytes) for the red
     LONG greenSize;// Compressed size (in bytes) for the green
     LONG blueSize;// Compressed size (in bytes) for the blue 
-
-
+    int QF;//quality factor
 };
 
 struct HuffNode{
@@ -162,7 +161,7 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "tunnel.bmp";
+    string imageFile= "flowers.bmp";
     string quality= "10";
     string OutputFile= "working.zzz";
     //declaring struct values
@@ -198,6 +197,7 @@ int main(int argc, char *argv[]){
     } 
 
     //creating frequency lists
+    
    HuffNode* bList[256] = {0};
     HuffNode* gList[256] = {0};
     HuffNode* rList[256] = {0};
@@ -228,9 +228,9 @@ int main(int argc, char *argv[]){
         for (int x = 0; x < bmih.biWidth; x++) {
             //this is for each pixel, then for each pixel we can say there are 3 colour valeus
             //getting each 
-            BYTE bVal=dataimg[3*x+y*correctWidth];
-            BYTE gVal=dataimg[3*x+y*correctWidth+1];
-            BYTE rVal=dataimg[3*x+y*correctWidth+2];
+            BYTE bVal=(dataimg[3*x+y*correctWidth])/(11-stoi(quality));
+            BYTE gVal=(dataimg[3*x+y*correctWidth+1])/(11-stoi(quality));
+            BYTE rVal=(dataimg[3*x+y*correctWidth+2])/(11-stoi(quality));
             // add 1 to the frequency of the certain color level 
             if(bList[bVal]==NULL){
                 bList[bVal]=new HuffNode;
@@ -280,6 +280,9 @@ int main(int argc, char *argv[]){
         }
     }
 
+    rSize=rSize/(11-stoi(quality));
+    gSize=gSize/(11-stoi(quality));
+    bSize=bSize/(11-stoi(quality));
     //build the trees
     HuffNode *rRoot =buildTree(rList, &rSize);
     HuffNode *gRoot =buildTree(gList, &gSize);
@@ -321,6 +324,7 @@ int main(int argc, char *argv[]){
     
     CH.width = bmih.biWidth;
     CH.height = bmih.biHeight;
+    CH.QF=stoi(quality);
 
     fwrite(&bmfh.bfType,sizeof(bmfh.bfType),1,fileOut);
     fwrite(&bmfh.bfSize,sizeof(bmfh.bfSize),1,fileOut);
