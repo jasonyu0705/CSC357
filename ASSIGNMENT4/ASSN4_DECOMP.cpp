@@ -73,40 +73,49 @@ HuffNode* postOrder(FILE* file) {
     //leaf
     if (value != -1) {
         HuffNode* leaf = new HuffNode;
+        if (leaf->left==NULL && leaf->right==NULL){
+            return NULL;
+          
+        }
         leaf->data = value;
         leaf->freq = 0; 
         leaf->left = NULL;
         leaf->right = NULL;
+        cout<<"hello"<<value<<endl;
         return leaf;
     }
+
     //internal
     HuffNode* node = new HuffNode;
     node->data = -1;  
     node->freq = 0; 
     node->left = postOrder(file);
     node->right = postOrder(file);
+    cout<<"hi"<<value<<endl;
+
     return node;
 }
 
 int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength,int *bitCount) {
     HuffNode* current = root;
     while (current) {
+        cout<<"hi not working"<<endl;
+
         //leafnode 
         if (current->data != -1) {
             return current->data;  
         }
-
-        if (*bitPos < bitLength) {
+if (*bitPos > bitLength) {  // End of bitstream
+            cout << "Error: Bitstream exhausted at pos " << *bitPos << endl;
+            return -1;  // Sentinel value for error
+        }
+        //if (*bitPos < bitLength) {
 
             int bytePos = *bitPos / 8;       // Determine byte position
             //int bit = (bitstring[bytePos] >> (7-*bitPos)) & 1; 
             int shift=  7 - *bitCount;
             int bit = (bitstring[bytePos] >>shift) & 1;  
 
-        // int byteIndex = *bitPos / 8;   
-    
-        // int shift=7-*bitCount;
-        // BYTE bitMask= 1<<shift;
 
             if (bit == 0) {
                 current = current->left;
@@ -121,7 +130,7 @@ int decode(HuffNode* root, BYTE* bitstring, int* bitPos, int bitLength,int *bitC
             }
             *bitPos=*bitPos+1;
             
-        } 
+        //} 
     }
 
     return 100000;  
@@ -204,23 +213,24 @@ for (int i = 0; i < 256; i++) {
     bBitCount=0;
     gBitCount=0;
 // int bitLength = CH.blueSize * 8;  // Total number of bits in blue channel
-
+int quality_factor = 11 - CH.QF;
 // Decode and write to image data array directly
 for (int y = 0; y < CH.height; y++) {  
     for (int x = 0; x < CH.width; x++) {  
-        int bVal = decode(bRoot, blueData, &bitPosBlue, CH.blueSize * 8,&bBitCount);
-        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8,&gBitCount);
-        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8,&rBitCount);
+        int bVal = decode(bRoot, blueData, &bitPosBlue, CH.blueSize * 8,&bBitCount) * quality_factor;
+        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8,&gBitCount)* quality_factor;
+        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8,&rBitCount)* quality_factor;
 
-        if (bVal == -1 || gVal == -1 || rVal == -1) {
-            cout << "Error decoding pixel at (" << x << "," << y << ")" << endl;
-            return 1;
-        }
+        // if (bVal == -1 || gVal == -1 || rVal == -1) {
+        //     cout << "Error decoding pixel at (" << x << "," << y << ")" << endl;
+        //     return 1;
+        // }
 
         
-        dataimg[3*x+y*correctWidth] = (BYTE) (bVal)*(11-CH.QF);
-        dataimg[3*x+y*correctWidth+1] =(BYTE) (gVal)*(11-CH.QF);
-        dataimg[3*x+y*correctWidth+2] = (BYTE) (rVal)*(11-CH.QF);
+        dataimg[3*x+y*correctWidth] = bVal;
+        dataimg[3*x+y*correctWidth+1] =gVal;
+        dataimg[3*x+y*correctWidth+2] = rVal;
+        
     }
 }
 

@@ -77,6 +77,12 @@ HuffNode *currentList;
 //         return 1;
 //     }
 // }
+void freeHuffTree(HuffNode* root) {
+    if (!root) return;
+    freeHuffTree(root->left);
+    freeHuffTree(root->right);
+    free(root);
+}
 int compare(const void *ptr1, const void *ptr2) {
     const HuffNode* n1 = *(const HuffNode **)ptr1;
     const HuffNode* n2 = *(const HuffNode **)ptr2;
@@ -162,7 +168,7 @@ int main(int argc, char *argv[]){
     // string quality= argv[2];
 
     string imageFile= "flowers.bmp";
-    string quality= "10";
+    string quality= "1";
     string OutputFile= "working.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
@@ -197,14 +203,14 @@ int main(int argc, char *argv[]){
     } 
 
     //creating frequency lists
-    
-   HuffNode* bList[256] = {0};
+
+    HuffNode* bList[256] = {0};
     HuffNode* gList[256] = {0};
     HuffNode* rList[256] = {0};
     string rHuffCodes[256], gHuffCodes[256], bHuffCodes[256];
     long rHuffLen[256], gHuffLen[256], bHuffLen[256];
 
-     BYTE *packedRed = new BYTE[bmih.biSizeImage]();
+    BYTE *packedRed = new BYTE[bmih.biSizeImage]();
     BYTE *packedGreen = new BYTE[bmih.biSizeImage]();
     BYTE *packedBlue = new BYTE[bmih.biSizeImage]();
 
@@ -222,15 +228,21 @@ int main(int argc, char *argv[]){
         rList[i]= 0;   
 
     }
-
+    int divisor=(11-stoi(quality));
     //this for lop is responsible for adding the data to the frequency list
     for (int y = 0; y < bmih.biHeight; y++) {
         for (int x = 0; x < bmih.biWidth; x++) {
             //this is for each pixel, then for each pixel we can say there are 3 colour valeus
             //getting each 
-            BYTE bVal=(dataimg[3*x+y*correctWidth])/(11-stoi(quality));
-            BYTE gVal=(dataimg[3*x+y*correctWidth+1])/(11-stoi(quality));
-            BYTE rVal=(dataimg[3*x+y*correctWidth+2])/(11-stoi(quality));
+
+            int b=(dataimg[3*x+y*correctWidth])/divisor;
+            int g=(dataimg[3*x+y*correctWidth+1])/divisor;
+            int r=(dataimg[3*x+y*correctWidth+2])/divisor;
+
+            BYTE bVal=(BYTE)b;
+            BYTE gVal=(BYTE)g;
+            BYTE rVal=(BYTE)r;
+
             // add 1 to the frequency of the certain color level 
             if(bList[bVal]==NULL){
                 bList[bVal]=new HuffNode;
@@ -280,9 +292,9 @@ int main(int argc, char *argv[]){
         }
     }
 
-    rSize=rSize/(11-stoi(quality));
-    gSize=gSize/(11-stoi(quality));
-    bSize=bSize/(11-stoi(quality));
+    // rSize=rSize/(11-stoi(quality));
+    // gSize=gSize/(11-stoi(quality));
+    // bSize=bSize/(11-stoi(quality));
     //build the trees
     HuffNode *rRoot =buildTree(rList, &rSize);
     HuffNode *gRoot =buildTree(gList, &gSize);
@@ -346,6 +358,8 @@ int main(int argc, char *argv[]){
     fclose(fileOut);
 
     munmap(dataimg, bmih.biSizeImage);
-
+freeHuffTree(rRoot);
+freeHuffTree(gRoot);
+freeHuffTree(bRoot);
     return 0;
 }
