@@ -77,7 +77,6 @@ HuffNode* postOrder(FILE* file) {
         leaf->freq = 0; 
         leaf->left = NULL;
         leaf->right = NULL;
-        cout<<"hello"<<value<<endl;
         return leaf;
     }
 
@@ -87,8 +86,6 @@ HuffNode* postOrder(FILE* file) {
     node->freq = 0; 
     node->left = postOrder(file);
     node->right = postOrder(file);
-    cout<<"hi"<<value<<endl;
-
     return node;
 }
 
@@ -278,18 +275,12 @@ int quality_factor = 11 - CH.QF;
 for (int y = 0; y < CH.height; y++) {  
     for (int x = 0; x < CH.width; x++) {  
         int bVal = decode(bRoot, blueData, &bitPosBlue, CH.blueSize * 8) * quality_factor;
-        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8)* quality_factor;
-        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8)* quality_factor;
+        int gVal = decode(gRoot, greenData, &bitPosGreen, CH.greenSize * 8) * quality_factor;
+        int rVal = decode(rRoot, redData, &bitPosRed, CH.redSize * 8) * quality_factor;
 
-        // if (bVal == -1 || gVal == -1 || rVal == -1) {
-        //     cout << "Error decoding pixel at (" << x << "," << y << ")" << endl;
-        //     return 1;
-        // }
-
-        
-        dataimg[3*x+y*correctWidth] = bVal;
-        dataimg[3*x+y*correctWidth+1] =gVal;
-        dataimg[3*x+y*correctWidth+2] = rVal;
+        dataimg[3*x+y*correctWidth] = (BYTE)bVal;
+        dataimg[3*x+y*correctWidth+1] =(BYTE)gVal;
+        dataimg[3*x+y*correctWidth+2] = (BYTE)rVal;
         
     }
 }

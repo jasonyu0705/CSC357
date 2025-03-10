@@ -104,7 +104,7 @@ void preOrder(HuffNode* root, FILE* fileOut) {
     preOrder(root->right, fileOut);
 }
 
-void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
+void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter, int *bitWritten) {
 
     int byteIndex = *bitPos / 8;   
     
@@ -115,16 +115,18 @@ void writeBit(BYTE bit, BYTE packedData[], int *bitPos, int *bit_counter) {
     }
     if(*bit_counter>=7){
         *bit_counter=0;
+        
     }else{
         *bit_counter=*bit_counter+1;
+        (*bitWritten)++;
     }
     *bitPos=*bitPos+1;
 }
 
-void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter) {
+void packBit(string &huffCode, BYTE packedData[], int *bitPos, int *bit_counter, int *bitWritten) {
     for (int i = 0; i < huffCode.size(); i++) {
         char bit = huffCode[i];  // Get the character from the string
-        writeBit(bit - '0', packedData, bitPos,bit_counter);
+        writeBit(bit - '0', packedData, bitPos,bit_counter,bitWritten);
     }
 }
 
@@ -167,8 +169,8 @@ int main(int argc, char *argv[]){
     // string imageFile= argv[1];
     // string quality= argv[2];
 
-    string imageFile= "flowers.bmp";
-    string quality= "10";
+    string imageFile= "example.bmp";
+    string quality= "5";
     string OutputFile= "working.zzz";
     //declaring struct values
     tagBITMAPFILEHEADER bmfh;
@@ -311,6 +313,7 @@ for (int i = 0; i < 256; i++) {
    //bit position poinrters
     int bitPosRed = 0, bitPosGreen = 0, bitPosBlue = 0;
     int bitCounterRed = 0, bitCounterGreen = 0, bitCounterBlue = 0;
+    int packedSizeb = 0, packedSizeg = 0, packedSizer = 0;
 
     //convert this to huffman data
     for (int y = 0; y <  bmih.biHeight; y++) {  
@@ -319,9 +322,9 @@ for (int i = 0; i < 256; i++) {
             BYTE gVal = dataimg[3 * x + y * correctWidth + 1]; 
             BYTE rVal = dataimg[3 * x + y * correctWidth + 2];  
 
-            packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bitCounterBlue);
-            packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bitCounterGreen);
-            packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bitCounterRed); 
+            packBit(bHuffCodes[bVal], packedBlue, &bitPosBlue,&bitCounterBlue,&packedSizeb);
+            packBit(gHuffCodes[gVal], packedGreen, &bitPosGreen, &bitCounterGreen,&packedSizeg);
+            packBit(rHuffCodes[rVal], packedRed, &bitPosRed,&bitCounterRed,&packedSizer); 
         }
     }
     //at this point all the data should be packed and is ready to be written to the file
